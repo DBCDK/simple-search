@@ -1,6 +1,7 @@
 - validation:
   path: /search
   method: post
-  data: {"query": "pol"}
+  data: '{"query": "pol"}'
   response:
+    json: false
     status_code: 200
