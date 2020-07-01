@@ -1,5 +1,7 @@
 FROM docker.dbc.dk/dbc-python3
 
+RUN apt-get update && apt-get install -y --no-install-recommends gcc g++
+
 RUN useradd -m python
 USER python
 WORKDIR /home/python
