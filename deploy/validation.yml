@@ -1,0 +1,6 @@
+- validation:
+  path: /search
+  method: post
+  data: {"query": "pol"}
+  response:
+    status_code: 200
