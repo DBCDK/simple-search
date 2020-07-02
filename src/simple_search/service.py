@@ -13,7 +13,7 @@ from dbc_pyutils import StatusHandler
 from dbc_pyutils import build_info
 from dbc_pyutils import Statistics
 
-from . import solr
+from .solr.search import Searcher
 
 STATS = {"search": Statistics(name="search")}
 
@@ -26,14 +26,22 @@ def setup_args():
     return parser.parse_args()
 
 class SearchHandler(BaseHandler):
+    def initialize(self, searcher):
+        self.searcher = searcher
+
     def post(self):
-        self.write("Not implemented yet")
+        body = json.loads(self.request.body.decode("utf8"))
+        query = body["q"]
+        debug = body.get("debug", False)
+        result = {"result": [doc for doc in self.searcher.search(query, debug)]}
+        self.write(result)
 
 def main():
     args = setup_args()
     info = build_info.get_info("simple_search")
+    searcher = Searcher(args.solr_url)
     tornado_app = tornado.web.Application([
-        ("/search", SearchHandler),
+        ("/search", SearchHandler, {"searcher": searcher}),
         ("/status", StatusHandler, {"ab_id": 1, "info": info, "statistics": list(STATS.values())})
     ])
     tornado_app.listen(args.port)
