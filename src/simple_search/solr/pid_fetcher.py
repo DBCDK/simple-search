@@ -22,12 +22,24 @@ def get_filmstriben_pids():
         lowell.execute(stmt)
         pids = {row[0] for row in lowell.fetchall()}
     return pids
+
+
+def get_ereolen_pids():
+    lowell_url = os.environ['LOWELL_URL']
+    with PostgresCursor(lowell_url) as lowell:
+        stmt = """SELECT pid 
+                  FROM metadata
+                  WHERE metadata->'collection' ?| array ['150015-ereol', '150015-erelicchld', '150015-nlychld', '150015-nlylic', '150015-netlydbog', '150015-nlylicchld', '150015-forlag', '150015-erelic', '150015-ereolchld']"""
+        lowell.execute(stmt)
+        pids = {row[0] for row in lowell.fetchall()}
+    return pids
             
 
 def get_randers_pids(holdingsfilename):
     holdings_pids = get_randers_holdings_pids(holdingsfilename)
     filmstriben_pids = get_filmstriben_pids()
-    return holdings_pids | filmstriben_pids
+    ereolen_pids = get_ereolen_pids()
+    return holdings_pids | filmstriben_pids | ereolen_pids
 
 
 def cli():
