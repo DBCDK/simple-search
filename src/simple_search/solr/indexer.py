@@ -84,8 +84,20 @@ def make_solr_documents(pid_list, limit=None):
     logger.info("created work2pids")
 
     for work, pids in tqdm(work2pids.items()):
+        # Solr doesn't have a field type which can be used as a tuple
+        # natively and using nested documents for this solution will
+        # introduce the overhead of then querying for child documents
+        # and handling the combination logic afterwards.
+        # Instead the mapping between a pid and which type it corresponds
+        # to is encoding in a string with ::: separating the three elements,
+        # pid, collection identifier, and type, and --- separating the individual
+        # collection identifiers and types.
+        pid_to_types_map = {p: ("---".join(docs[p]["collection"]),
+            "---".join(docs[p]["type"])) for p in pids}
+        pid_types_list = [f"{p}:::{pid_to_types_map[p][0]}:::{pid_to_types_map[p][1]}" for p in pids]
         document = {"workid": work,
-                    "pids": pids}
+                    "pids": pids,
+                    "pid_to_type_map": pid_types_list}
 
         metadata = work2metadata[work]
 
