@@ -60,19 +60,20 @@ def add_keys(metadata, keys, is_list=True):
                 document[key] = document[key][0]
     return document
 
-def make_solr_documents(limit=None):
+def make_solr_documents(pid_list, limit=None):
     """
     Creates solr documents based on rows from LOWELL
 
     :param limit:
         limits number of retrieved rows
     """
-    docs = {r[0]: r[1] for r in get_documents("select pid, metadata from metadata limit %s", (limit,))}
-    logger.info("size of docs %s", len(docs))
-
-    pids = list(docs.keys())
+    with open(pid_list) as fp:
+        pids = [f.strip() for f in fp][:limit]
     pid2work = lmf.pid2work(pids)
     logger.info("pid2work size %s", len(pid2work))
+    docs = {r[0]: r[1] for r in get_documents(
+        "SELECT pid, metadata FROM metadata WHERE pid IN %s", (tuple(pids),))}
+    logger.info("size of docs %s", len(docs))
 
     work2metadata = map_work_to_metadata(docs, pid2work)
     logger.info("work2metadata size %s", len(work2metadata))
@@ -103,7 +104,7 @@ def create_collection(solr_url, pid_list, limit=None, batch_size=1000):
     Harvest rows from LOWELL and creates and indexes solr documents
     """
     logger.info("Retrieving data from db")
-    documents = [d for d in make_solr_documents(limit)]
+    documents = [d for d in make_solr_documents(pid_list, limit)]
     doc_chunks = [c for c in chunks(documents, batch_size)]
     logger.info(f"Created {len(doc_chunks)} document chunk (size={batch_size})")
     logger.info(f"Indexing into solr at {solr_url}")
