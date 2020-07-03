@@ -1,0 +1,50 @@
+#!groovy
+
+def workerNode = "xp-build-i01"
+
+pipeline {
+	agent {
+		docker {
+			label workerNode
+			image "docker.dbc.dk/build-env"
+			alwaysPull true
+		}
+	}
+	triggers {
+		cron("0 4 * * *")
+	}
+	environment {
+		    LOWELL_URL = credentials('lowell_db_connection_string')
+		    ARTIFACTORY_LOGIN = credentials("artifactory_login")
+
+		    HOLDINGS_ARTIFACT_URL = 'https://artifactory.dbc.dk/artifactory/os-scrum-generic/holdings-items/laesekompas-holdings-items-dump.json.gz'
+	}
+	stages {
+		stage("pull") {
+			steps {
+				sh "curl -L ${HOLDINGS_ARTIFACT_URL} -o holdings.json.gz"
+			}
+		}
+		stage("build") {
+			steps {
+				sh """#!/usr/bin/env bash
+					set -xe
+					rm -rf env pip-cache
+					python3 -m venv env
+					source env/bin/activate
+					pip install -U pip
+					mkdir pip-cache
+					export XDG_CACHE_HOME=pip-cache
+					
+					pip install -e .
+					pid-list-generator -f=holdings.json.gz -o=773000.pids
+					"""
+			}
+		}
+		stage("push") {
+			steps {
+				sh "curl -u $ARTIFACTORY_LOGIN https://artifactory.dbc.dk/artifactory/ai-generic/simple-search/773000.pids -T 773000.pids"
+			}
+		}
+	}
+}
