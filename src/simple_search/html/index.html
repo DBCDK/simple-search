@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>React Local</title>
+  <script type="application/javascript" src="https://unpkg.com/react@16/umd/react.development.js"></script>
+  <script type="application/javascript" src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+  <script type="application/javascript" src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+</head>
+
+
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    
+    
+    class Result extends React.Component {
+    
+	// handleClick = () => {
+	 //   const p = this.props;
+	 //   console.log(p.result.pid)
+	 //   p.parentResultClick(p.result.pid)
+	//};
+	render() {
+	    const p = this.props;
+	    
+	    var mystyle = {
+		padding: '3px',
+		borderRadius: '10px',
+		borderWidth: '2px',
+		borderColor: 'blue',
+		borderStyle: 'solid'
+	    }
+	    
+	    return(
+    <div
+		style={mystyle}
+		onClick={this.handleClick}
+		       >
+		    <table width='100%'>
+		    <tbody>
+		    <tr>
+		    <td width='90%'>
+		    {/*<i>{p.result.creator}</i><br/>*/}
+		    {p.result.title}<br/>
+		    {/*<a href={'https://bibliotek.dk/work/' + p.result.pid}>bibliotek.dk</a>*/}
+		
+		    </td>
+		    {/*
+		    <td width='30%'>
+		    <a>
+		    <img src={'image?pid=' + p.result.pid} width='50' height='50'/>
+		</a>
+		    </td>
+		    */}
+		    </tr>
+		    </tbody>
+		    </table>
+		    </div>
+	    )
+	};
+    };
+    
+    class ResultList extends React.Component {
+	resultClick = pid => {
+	    const p = this.props;
+	    console.log('ResultList: ' + pid)
+	    p.parentResultClick(pid)
+	}
+
+	render() {
+	    const p = this.props;
+
+	    var mystyle = {
+		margin: 'auto'
+	    }
+
+	    return(
+		    <React.Fragment>
+		    <table style={mystyle} width='100%'>
+		      <tbody>
+			{p.results.map((result, i) => <tr key={i}><td><Result result={result}/></td></tr>)}
+		</tbody>
+		    </table>
+		    </React.Fragment>
+	    );
+	};
+    };
+
+    class SearchLayout extends React.Component {
+	constructor() {
+	    super()
+	    this.state = {
+		query: 'hest',
+		last_query: '',
+		results: [],
+	    };
+	};
+	handleSubmit = evt => {
+	    evt.preventDefault()
+	    this.handleClick()
+	}
+	
+	handleClick = () => {
+	    var query = this.state.query;
+	    if (query) {
+		this.handleSearch(query)
+	    }
+	};
+	handleSearch = (query) => {
+		    console.log('Call search: ' + query)
+		    const requestOptions = {
+		    method: 'POST',
+		    headers: { 'Content-Type': 'application/json' },
+		    body: JSON.stringify({q: query}),
+		    }
+	    fetch('search', requestOptions)
+		.then(response => response.json())
+		.then(data =>
+		      this.setState({
+			  last_query: this.state.query,
+			  query: '',
+			  results: data.result
+		      })
+		     )
+		.catch(error => this.setState({results: []}));
+	};
+	render() {
+	    return(
+		    <React.Fragment>
+		    <div align='center' valign='top'>
+		    <form onSubmit={this.handleSubmit}>
+		    <input
+		type='text'
+		value={this.state.query}
+		onChange={event => this.setState({ query: event.target.value })}
+		onSubmit={this.handleClick}
+		    />
+		    <input type='button' onClick={this.handleClick} value='Go'/>
+		    </form>
+		    </div>
+		    <table align='center' valign='top'>
+		    <tbody>
+		    <tr>
+		    <td valign='top'>
+		    <div align='center' valign='top'>Query: {this.state.last_query}</div>
+		    <ResultList results={this.state.results}/>
+		    </td>
+		    </tr>
+		    </tbody>
+		    </table>
+		    </React.Fragment>
+	    )
+	};
+    };
+		    
+    class Layout extends React.Component {
+
+	render() {
+	    const p = this.props;
+	    return(
+		    <React.Fragment>
+		    <table height="100%" width="100%">
+		    <tbody>
+		    <tr>
+		    <td width="80%" valign='top'>
+		    <SearchLayout/>
+		    </td>
+		    </tr>
+		    </tbody>
+		    </table>
+		    </React.Fragment>
+	    )
+	};
+    };
+    
+    ReactDOM.render(<Layout />, document.getElementById("root"));
+  </script>
+
+</body>
+
+</html>
+    
