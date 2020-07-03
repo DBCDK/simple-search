@@ -29,7 +29,7 @@ def get_ereolen_pids():
     with PostgresCursor(lowell_url) as lowell:
         stmt = """SELECT pid 
                   FROM metadata
-                  WHERE metadata->'collection' ?| array ['150015-ereol', '150015-erelicchld', '150015-nlychld', '150015-nlylic', '150015-netlydbog', '150015-nlylicchld', '150015-forlag', '150015-erelic', '150015-ereolchld']"""
+                  WHERE metadata->'collection' ?| array ['150015-ereol', '150015-erelicchld', '150015-nlychld', '150015-nlylic', '150015-netlydbog', '150015-nlylicchld', '150015-erelic', '150015-ereolchld']"""
         lowell.execute(stmt)
         pids = {row[0] for row in lowell.fetchall()}
     return pids
@@ -56,7 +56,7 @@ def cli():
     return args
 
 
-def run():
+def main():
     args = cli()
     with open(args.pid_file, 'w') as of:
         for pid in get_randers_pids(args.holdingsfilename):
@@ -64,4 +64,4 @@ def run():
             
     
 if __name__ == '__main__':
-    run()
+    main()
