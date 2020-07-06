@@ -14,6 +14,7 @@ from dbc_pyutils import BaseHandler
 from dbc_pyutils import StatusHandler
 from dbc_pyutils import build_info
 from dbc_pyutils import Statistics
+from dbc_pyutils import CoverUrls
 
 from .solr.search import Searcher
 
@@ -26,6 +27,21 @@ def setup_args():
     parser.add_argument("solr_url", metavar="solr-url")
     parser.add_argument("-p", "--port", default=5000)
     return parser.parse_args()
+
+
+class CoverHandler(BaseHandler):
+
+    def initialize(self):
+        client_id = os.environ['OPEN_PLATFORM_CLIENT_ID']
+        client_secret = os.environ['OPEN_PLATFORM_CLIENT_SECRET']
+        self.cover_func = CoverUrls(client_id, client_secret)
+
+    def get(self, pid):
+        cover_info = self.cover_func([pid], fields=['coverUrlFull'])
+        cover = cover_info.get(pid, {}).get('coverUrlFull', [''])[0]
+        result = {'url': cover} if cover else {}
+        self.write(result)
+
 
 class SearchHandler(BaseHandler):
     def initialize(self, searcher):
@@ -52,6 +68,7 @@ def main():
     searcher = Searcher(args.solr_url)
     tornado_app = tornado.web.Application([
         ("/", DefaultHandler, {}),
+        ("/cover/(.*)", CoverHandler),
         ("/search", SearchHandler, {"searcher": searcher}),
         ("/status", StatusHandler, {"ab_id": 1, "info": info, "statistics": list(STATS.values())})
     ])
