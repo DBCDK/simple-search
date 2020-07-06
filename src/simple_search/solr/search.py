@@ -16,9 +16,9 @@ class Searcher(object):
             "defType": "edismax",
             "bq": "{!edismax qf=creator v=$q bq=}^5",
             "bq": "{!edismax qf=title v=$q bq=}^10",
-            "fl": "pids,title,creator,contributor,workid"
+            "fl": "pids,title,creator,contributor,workid,work_type"
         }
-        debug_fields = ["title_alternative", "creator", "workid", "contributor"]
+        debug_fields = ["title_alternative", "creator", "workid", "contributor", "work_type"]
         include_fields = ["pids", "title"]
         for doc in self.solr.search(query, **params):
             result_doc = {f: doc[f] for f in include_fields if f in doc}
