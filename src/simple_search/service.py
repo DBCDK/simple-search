@@ -43,6 +43,18 @@ class CoverHandler(BaseHandler):
         self.write(result)
 
 
+class ConfigHandler(BaseHandler):
+
+    def get(self):
+        config_filename = 'cfg/search_results_tester_config.json'
+        config_path = resource_filename('simple_search', config_filename)
+        queries = []
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+            queries = [query['q'] for query in config['queries']]
+        self.write(json.dumps({'queries': queries}))
+        
+        
 class SearchHandler(BaseHandler):
     def initialize(self, searcher):
         self.searcher = searcher
@@ -68,6 +80,7 @@ def main():
     searcher = Searcher(args.solr_url)
     tornado_app = tornado.web.Application([
         ("/", DefaultHandler, {}),
+        ("/config", ConfigHandler),
         ("/cover/(.*)", CoverHandler),
         ("/search", SearchHandler, {"searcher": searcher}),
         ("/status", StatusHandler, {"ab_id": 1, "info": info, "statistics": list(STATS.values())})

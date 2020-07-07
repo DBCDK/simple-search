@@ -213,17 +213,17 @@
 	    }
 	};
 	handleSearch = (query) => {
-	            console.log('Call search: ' + query)
-		    const requestOptions = {
-		    method: 'POST',
-		    headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({q: query, debug: true}),
-		    }
+	    console.log('Call search: ' + query)
+	    const requestOptions = {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({q: query, debug: true}),
+	    }
 	    fetch('search', requestOptions)
 		.then(response => response.json())
 		.then(data =>
 		      this.setState({
-			  last_query: this.state.query,
+			  last_query: query,
 			  query: '',
 			  results: data.result
 		      })
@@ -258,9 +258,83 @@
 	    )
 	};
     };
+
+    class QueryElement extends React.Component {
+
+	handleClick = () => {
+	    console.log('Click: '+this.props.query);
+	    this.props.parentHandleQuery(this.props.query);
+	}
+
+	render() {
+	    var mystyle = {
+		padding: '3px',
+		borderRadius: '10px',
+		borderWidth: '2px',
+		borderColor: 'green',
+		borderStyle: 'solid'
+	    }
+
+	    return(
+		    <tr>
+		    <td>
+		    <div style={mystyle} onClick={this.handleClick}>
+		    {this.props.query}
+		</div>
+		    </td>
+		    </tr>
+	    )
+	}
+    }
+
+    class ConfigLayout extends React.Component {
+	constructor() {
+	    super()
+	    this.state = {
+		queries: [],
+	    };
+	};
+
+	handleQuery = (query) => {
+	    console.log('CL: '+query)
+	    this.props.parentHandleQuery(query);
+	}
+
+	fetchConfig = () => {
+	    console.log('Call config')
+	    fetch('config')
+		.then(response => response.json())
+		.then(data =>
+		      this.setState({
+			  queries: data.queries
+		      })
+		     )
+		.catch(error => this.setState({queries: []}));
+	};
+
+	componentDidMount() {
+	    this.fetchConfig()
+	}
+	
+	render() {
+	    return(
+		    <table width='100%' valign='top' align='left'>
+		    <tbody>
+		    <tr align='center'><td><b>Common Queries:</b></td></tr>
+		    {this.state.queries.map((query, i) => <QueryElement key={i} query={query} parentHandleQuery={this.handleQuery}/>)}
+		</tbody>
+		    </table>
+	    )
+	}
+    }
 		    
     class Layout extends React.Component {
 
+	handleQuery = (query) => {
+	    console.log('Layout: '+query)
+	    this.refs.search.handleSearch(query)
+	}
+	
 	render() {
 	    const p = this.props;
 	    return(
@@ -268,8 +342,11 @@
 		    <table height="100%" width="100%">
 		    <tbody>
 		    <tr>
+		    <td width='20%' valign='top'>
+		    <ConfigLayout parentHandleQuery={this.handleQuery}/>
+		    </td>
 		    <td width="90%" valign='top'>
-		    <SearchLayout/>
+		    <SearchLayout ref='search'/>
 		    </td>
 		    </tr>
 		    </tbody>
