@@ -25,7 +25,7 @@ in the [simple-search-solr project](https://gitlab.dbc.dk/ai/simple-search-solr)
 
 The search engeine is exposed through kubernetes at [http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk/search](http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk/search)
 
-The search-engine is exposed as a get and post method. It has two parameters:
+The search-engine is exposed as a **get** and **post** method. It has two parameters:
 * **q**: query to base search on
 * **debug**: If true debug information is present in response 
 
