@@ -16,10 +16,11 @@ class Searcher(object):
 
         params = {
             "defType": "edismax",
-            "qf": "creator_and_title^100 creator^10 title^10 contributor subject_dbc",
+            "qf": "creator_exact^200 title_exact^150 creator_and_title^100 creator^10 title^10 contributor subject_dbc",
             "pf": "creator^100 title^100 contributor^50 subject_dbc",
             "bq": "{!edismax qf=creator v=$q bq=}^10",
-            "fl": "pids,title,creator,contributor,workid,work_type,language,pid_to_type_map",
+            "fl": "pids,title,creator,contributor,workid,work_type,language,pid_to_type_map,score",
+            "sort": "score desc",
             "boost": "n_pids",
         }
         debug_fields = ["title_alternative", "creator", "workid", "contributor", "work_type"]
