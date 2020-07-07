@@ -19,17 +19,29 @@ class Searcher(object):
             "qf": "creator_and_title^100 creator^10 title^10 contributor",
             "bq": "{!edismax qf=creator v=$q bq=}^10",
             "bq": "{!edismax qf=title v=$q bq=}^1",
-            "fl": "pids,title,creator,contributor,workid,work_type",
+            "fl": "pids,title,creator,contributor,workid,work_type,language,pid_to_type_map",
             "boost": "n_pids",
         }
         debug_fields = ["title_alternative", "creator", "workid", "contributor", "work_type"]
-        include_fields = ["pids", "title"]
+        include_fields = ["pids", "title", "language"]
         for doc in self.solr.search(query, **params):
             result_doc = {f: doc[f] for f in include_fields if f in doc}
+            result_doc["pid_details"] = parse_pid_to_type_map(doc["pid_to_type_map"])
             if debug:
                 debug_object = {f: doc[f] for f in debug_fields if f in doc}
                 result_doc["debug"] = debug_object
             yield result_doc
+
+
+def parse_pid_to_type_map(content):
+    """
+    Parses content of a solr_pid_to_type_map field into a desired response structure
+    """
+    def map_entry(entry):
+        pid, collections, mattype = entry.split(":::")
+        return {"pid": pid, "type": mattype}
+    return [map_entry(entry) for entry in content]
+
 
 def make_truncated_query(query, field):
     """
