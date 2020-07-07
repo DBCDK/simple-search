@@ -73,6 +73,6 @@ example of using get:
 
 ## Search GUI
 
-The also provides a simple GUI for exploratory work. Each hit has a cover (if any) and links to bib.dk
+The also provides a simple GUI for exploratory work. Each hit has a cover (if any) and links to [bibliotek.dk](https://bibliotek.dk/)
 
 The GUI can be found at [http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk](http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk)
