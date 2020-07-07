@@ -103,7 +103,7 @@ def make_solr_documents(pid_list, limit=None):
         metadata = work2metadata[work]
 
         document.update(add_keys(metadata, ["title_alternative", "aut",
-            "creator", "creator_sort", "contributor", "work_type", "language"]))
+            "creator", "creator_sort", "contributor", "work_type", "language", "subject_dbc"]))
         document.update(add_keys(metadata, ["title"], is_list=False))
 
         yield document
