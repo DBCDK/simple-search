@@ -66,6 +66,13 @@ class SearchHandler(BaseHandler):
         result = {"result": [doc for doc in self.searcher.search(query, debug)]}
         self.write(result)
 
+    def get(self):
+        query = self.get_argument('q')
+        debug = self.get_argument('debug', False)
+        debug = True if debug.lower() in {'true', '1'} else False
+        result = {"result": [doc for doc in self.searcher.search(query, debug)]}
+        self.write(result)
+
 
 class DefaultHandler(BaseHandler):
     def get(self):
