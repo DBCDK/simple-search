@@ -97,7 +97,8 @@ def make_solr_documents(pid_list, limit=None):
         pid_types_list = [f"{p}:::{pid_to_types_map[p][0]}:::{pid_to_types_map[p][1]}" for p in pids]
         document = {"workid": work,
                     "pids": pids,
-                    "pid_to_type_map": pid_types_list}
+                    "pid_to_type_map": pid_types_list,
+                    "n_pids": len(pids)}
 
         metadata = work2metadata[work]
 
