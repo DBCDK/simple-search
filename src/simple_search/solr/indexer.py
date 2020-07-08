@@ -13,8 +13,10 @@ Creates document collection.
 
 import argparse
 from collections import defaultdict
+import datetime
 import math
 import os
+import sys
 
 from mobus import lowell_mapping_functions as lmf
 import logging
@@ -97,18 +99,32 @@ def make_solr_documents(pid_list, limit=None):
             "---".join(docs[p]["type"])) for p in pids}
         pid_types_list = [f"{p}:::{pid_to_types_map[p][0]}:::{pid_to_types_map[p][1]}" for p in pids]
         n_pids = math.log(len(pids) if len(pids) <9 else 9)+1
+        metadata = work2metadata[work]
+        years_since_publication = get_years_since_publication(metadata["year"]) if "year" in metadata else 99
         document = {"workid": work,
                     "pids": pids,
                     "pid_to_type_map": pid_types_list,
-                    "n_pids": n_pids}
-
-        metadata = work2metadata[work]
+                    "n_pids": n_pids,
+                    "years_since_publication": years_since_publication}
 
         document.update(add_keys(metadata, ["title_alternative", "aut",
             "creator", "creator_sort", "contributor", "work_type", "language", "subject_dbc"]))
         document.update(add_keys(metadata, ["title"], is_list=False))
 
         yield document
+
+def get_years_since_publication(years):
+    """
+    Converts the year field to the number of years since publication,
+    taking the newest published version in the work.
+    """
+    if not years:
+        return 99
+    try:
+        year = max([int(y) for y in years])
+        return datetime.datetime.now().year - year
+    except ValueError as e:
+        print(f"WARNING: failed converting element of {years} to an integer: {e}", file=sys.stderr)
 
 def chunks(l, n):
     for i in range(0, len(l), n):
