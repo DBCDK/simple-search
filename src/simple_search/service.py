@@ -81,6 +81,12 @@ class DefaultHandler(BaseHandler):
         self.render(path)
 
 
+class APIHandler(BaseHandler):
+    def get(self):
+        path = resource_filename('simple_search', 'html/help.html')
+        self.render(path)
+
+
 def main():
     args = setup_args()
     info = build_info.get_info("simple_search")
@@ -88,6 +94,7 @@ def main():
     tornado_app = tornado.web.Application([
         ("/", DefaultHandler, {}),
         ("/config", ConfigHandler),
+        ("/api", APIHandler),
         ("/cover/(.*)", CoverHandler),
         ("/search", SearchHandler, {"searcher": searcher}),
         ("/status", StatusHandler, {"ab_id": 1, "info": info, "statistics": list(STATS.values())})
