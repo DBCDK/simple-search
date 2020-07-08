@@ -5,5 +5,6 @@
     {"q": "hest", "workids": {"work:1445037": "1"}},
     {"q": "paul auster", "workids": {"work:20108873": "1-5"}},
     {"q": "jan guillou", "workids": {"work:983872": "1-5"}},
-    {"q": "jan gillo", "workids": {"work:714698": "1", "work:983872": "2"}}
+    {"q": "jan gillo", "workids": {"work:714698": "1", "work:983872": "2"}},
+	{"q": "krig og fred", "workids": {"work:293964": "1"}}
 ]}
