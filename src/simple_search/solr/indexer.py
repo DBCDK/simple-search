@@ -13,6 +13,7 @@ Creates document collection.
 
 import argparse
 from collections import defaultdict
+import math
 import os
 
 from mobus import lowell_mapping_functions as lmf
@@ -95,10 +96,11 @@ def make_solr_documents(pid_list, limit=None):
         pid_to_types_map = {p: ("---".join(docs[p]["collection"]),
             "---".join(docs[p]["type"])) for p in pids}
         pid_types_list = [f"{p}:::{pid_to_types_map[p][0]}:::{pid_to_types_map[p][1]}" for p in pids]
+        n_pids = math.log(len(pids) if len(pids) <9 else 9)+1
         document = {"workid": work,
                     "pids": pids,
                     "pid_to_type_map": pid_types_list,
-                    "n_pids": len(pids)}
+                    "n_pids": n_pids}
 
         metadata = work2metadata[work]
 
