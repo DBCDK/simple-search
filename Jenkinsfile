@@ -58,6 +58,9 @@ pipeline {
 			steps {
 				sh "set-new-version simple-search-1-0.yml ${env.GITLAB_PRIVATE_TOKEN} ai/simple-search-secrets ${env.DOCKER_TAG} -b staging"
 				build job: "ai/simple-search/simple-search-deploy/staging", wait: true
+
+				sh "set-new-version simple-search-1-0.yml ${env.GITLAB_PRIVATE_TOKEN} ai/simple-search-secrets ${env.DOCKER_TAG} -b staging-search-evaluation"
+				build job: "ai/simple-search/simple-search-deploy/staging-search-evaluation", wait: true
 			}
 		}
 		stage("validate staging") {
@@ -73,6 +76,7 @@ pipeline {
 			}
 			steps {
 				sh "webservice_validation.py http://simple-search-1-0.mi-staging.svc.cloud.dbc.dk deploy/validation.yml"
+				sh "webservice_validation.py http://simple-search-evaluation-1-0.mi-staging.svc.cloud.dbc.dk deploy/validation.yml"
 			}
 		}
 		stage("update prod version number") {
@@ -89,6 +93,9 @@ pipeline {
 			steps {
 				sh "set-new-version simple-search-1-0.yml ${env.GITLAB_PRIVATE_TOKEN} ai/simple-search-secrets ${env.DOCKER_TAG} -b prod"
 				build job: "ai/simple-search/simple-search-deploy/prod", wait: true
+
+				sh "set-new-version simple-search-1-0.yml ${env.GITLAB_PRIVATE_TOKEN} ai/simple-search-secrets ${env.DOCKER_TAG} -b prod-search-evaluation"
+				build job: "ai/simple-search/simple-search-deploy/prod-search-evaluation", wait: true
 			}
 		}
 		stage("validate prod") {
@@ -104,6 +111,7 @@ pipeline {
 			}
 			steps {
 				sh "webservice_validation.py http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk deploy/validation.yml"
+				sh "webservice_validation.py http://simple-search-evaluation-1-0.mi-prod.svc.cloud.dbc.dk deploy/validation.yml"
 			}
 		}
 	}
