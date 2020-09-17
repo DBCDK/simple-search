@@ -96,7 +96,7 @@ def make_solr_documents(pid_list, limit=None):
         # pid, collection identifier, and type, and --- separating the individual
         # collection identifiers and types.
         pid_to_types_map = {p: ("---".join(docs[p]["collection"]),
-            "---".join(docs[p]["type"])) for p in pids}
+            "---".join(docs[p].get("type", []))) for p in pids}
         pid_types_list = [f"{p}:::{pid_to_types_map[p][0]}:::{pid_to_types_map[p][1]}" for p in pids]
         n_pids = math.log(len(pids) if len(pids) <9 else 9)+1
         metadata = work2metadata[work]
