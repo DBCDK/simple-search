@@ -37,13 +37,17 @@ pipeline {
 					export XDG_CACHE_HOME=pip-cache
 					
 					pip install -e .
-					pid-list-generator -f=holdings.json.gz -o=773000.pids
+					pid-list-generator randers -f=holdings.json.gz -o=773000.pids
+					pid-list-generator bibdk -o bibdk.pids
 					"""
 			}
 		}
 		stage("push") {
 			steps {
-				sh "curl -u $ARTIFACTORY_LOGIN https://artifactory.dbc.dk/artifactory/ai-generic/simple-search/773000.pids -T 773000.pids"
+				sh """/usr/bin/env bash
+					curl -u $ARTIFACTORY_LOGIN https://artifactory.dbc.dk/artifactory/ai-generic/simple-search/773000.pids -T 773000.pids
+					curl -u $ARTIFACTORY_LOGIN https://artifactory.dbc.dk/artifactory/ai-generic/simple-search/bibdk.pids -T bibdk.pids
+				"""
 			}
 		}
 	}

@@ -2,6 +2,9 @@
 
 import argparse
 import os
+import sys
+
+from booklens.pid2work_mappings import bibdk_pid2work_map
 from booklens.pid2work_mappings import work2pids_map
 from dbc_pyutils.cursor import PostgresCursor
 
@@ -44,9 +47,10 @@ def get_randers_pids(holdingsfilename):
 
 def cli():
     parser = argparse.ArgumentParser('')
+    parser.add_argument("source", help="The source for which to get pids",
+        choices=["bibdk", "randers"])
     parser.add_argument('-f', '--holdings-filename',
                         dest='holdingsfilename',
-                        required=True,
                         help='filename for the holdingsdata. May both be a json or a json-gzipped file.')
     parser.add_argument('-o', '--outfile',
                         dest='pid_file',
@@ -58,8 +62,21 @@ def cli():
 
 def main():
     args = cli()
+    pid_list = []
+    if args.source == "bibdk":
+        pid2work, _ = bibdk_pid2work_map()
+        pid_list = {p for p in pid2work.keys()}
+    elif args.source == "randers":
+        if args.holdingsfilename is None:
+            print(f"Holdings file is required if source is randers",
+                file=sys.stderr)
+            sys.exit(1)
+        pid_list = get_randers_pids(args.holdingsfilename)
+    else:
+        print(f"Unknown source {args.source}", file=sys.stderr)
+        sys.exit(1)
     with open(args.pid_file, 'w') as of:
-        for pid in get_randers_pids(args.holdingsfilename):
+        for pid in pid_list:
             of.write(pid + '\n')
             
     
