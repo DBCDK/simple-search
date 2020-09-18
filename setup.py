@@ -9,11 +9,12 @@ setup(name="simple-search",
     package_data={'simple_search': ['html/*', 'cfg/*']},
     description="",
     provides=["simple_search"],
-    install_requires=["booklens", "dbc-pyutils", "mobus", "tornado", "tqdm"],
+    install_requires=["booklens", "dbc-pyutils", "joblib", "mobus", "numpy", "pandas", "tornado", "tqdm"],
     entry_points=
         {"console_scripts": [
             "simple-search-service = simple_search.service:main",
             "solr-indexer = simple_search.solr.indexer:main",
             "pid-list-generator = simple_search.solr.pid_fetcher:main",
+            "generate-work-to-holdings-map = simple_search.solr.indexer:generate_work_to_holdings_map",
         ]}
     )

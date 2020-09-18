@@ -12,15 +12,19 @@ Creates document collection.
 """
 
 import argparse
+import collections
 from collections import defaultdict
 import datetime
 import math
 import os
 import sys
 
+import joblib
 from mobus import lowell_mapping_functions as lmf
 import logging
 from tqdm import tqdm
+import numpy as np
+import pandas as pd
 
 import dbc_pyutils.solr
 import dbc_pyutils.cursor
@@ -62,6 +66,35 @@ def add_keys(metadata, keys, is_list=True):
             if not is_list:
                 document[key] = document[key][0]
     return document
+
+def get_work_holdings(holdings_path: str) -> dict:
+    df = pd.read_json(holdings_path, lines=True,
+        dtype={"bibliographicRecordId": str, "agencyId": str})
+    occurrences = df.groupby(["agencyId", "bibliographicRecordId"]).size()\
+        .to_frame(name="occurrences")\
+        .reset_index()
+    work_to_holdings = collections.Counter()
+    with tqdm(total=occurrences.shape[0]) as progressbar:
+        for _, chunk in occurrences.groupby(np.arange(len(occurrences)) // 5000):
+            chunk["potential-pid-1"] = "870970-basis:" + chunk["bibliographicRecordId"]
+            chunk["potential-pid-2"] = chunk["agencyId"] + "-katalog:" + chunk["bibliographicRecordId"]
+            pids = pd.concat([chunk["potential-pid-1"], chunk["potential-pid-2"]]).unique()
+            pid2work = lmf.pid2work(pids)
+            for pid, work in pid2work.items():
+                work_to_holdings[work] += chunk[(chunk["potential-pid-1"] == pid) | (chunk["potential-pid-2"] == pid)]["occurrences"].sum()
+            progressbar.update(chunk.shape[0])
+    return work_to_holdings
+
+def generate_work_to_holdings_map():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("holdings_file_path", metavar="holdings-file-path",
+        help="Path to holdings json file")
+    parser.add_argument("output", help="Path to output file")
+    args = parser.parse_args()
+
+    work_to_holdings = get_work_holdings(args.holdings_file_path)
+    with open(args.output, "wb") as fp:
+        joblib.dump(work_to_holdings, fp)
 
 def make_solr_documents(pid_list, limit=None):
     """
