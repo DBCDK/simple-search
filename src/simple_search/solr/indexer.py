@@ -132,7 +132,7 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, limit=None):
         n_pids = math.log(len(pids) if len(pids) <9 else 9)+1
         metadata = work2metadata[work]
         years_since_publication = get_years_since_publication(metadata["year"]) if "year" in metadata else 99
-        holdings = int(work_to_holdings_map[work]) if work in work_to_holdings_map else 0
+        holdings = math.log(int(work_to_holdings_map[work])) if work in work_to_holdings_map else 0
         document = {"workid": work,
                     "pids": pids,
                     "pid_to_type_map": pid_types_list,
