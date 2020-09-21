@@ -73,17 +73,15 @@ def get_work_holdings(holdings_path: str) -> dict:
     occurrences = df.groupby(["agencyId", "bibliographicRecordId"]).size()\
         .to_frame(name="occurrences")\
         .reset_index()
-    work_to_holdings = collections.Counter()
-    with tqdm(total=occurrences.shape[0]) as progressbar:
-        for _, chunk in occurrences.groupby(np.arange(len(occurrences)) // 5000):
-            chunk["potential-pid-1"] = "870970-basis:" + chunk["bibliographicRecordId"]
-            chunk["potential-pid-2"] = chunk["agencyId"] + "-katalog:" + chunk["bibliographicRecordId"]
-            pids = pd.concat([chunk["potential-pid-1"], chunk["potential-pid-2"]]).unique()
-            pid2work = lmf.pid2work(pids)
-            for pid, work in pid2work.items():
-                work_to_holdings[work] += chunk[(chunk["potential-pid-1"] == pid) | (chunk["potential-pid-2"] == pid)]["occurrences"].sum()
-            progressbar.update(chunk.shape[0])
-    return work_to_holdings
+    occurrences["potential-pid-1"] = "870970-basis:" + occurrences["bibliographicRecordId"]
+    occurrences["potential-pid-2"] = occurrences["agencyId"] + "-katalog:" + occurrences["bibliographicRecordId"]
+    all_pids = np.concatenate((occurrences["potential-pid-1"].unique(), occurrences["potential-pid-2"].unique()))
+    all_works = lmf.pid2work(all_pids)
+    occurrences["work1"] = occurrences["potential-pid-1"].apply(lambda p: all_works[p] if p in all_works else None)
+    occurrences["work2"] = occurrences["potential-pid-2"].apply(lambda p: all_works[p] if p in all_works else None)
+    occurrences["combined_work"] = np.where(occurrences["work1"].isna(), occurrences["work2"], occurrences["work1"])
+    counts = occurrences.groupby("combined_work").sum("occurrences")
+    return counts["occurrences"].to_dict()
 
 def generate_work_to_holdings_map():
     parser = argparse.ArgumentParser()
