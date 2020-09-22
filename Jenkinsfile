@@ -5,6 +5,7 @@ def workerNode = "xp-build-i01"
 pipeline {
 	agent { label workerNode }
 	environment {
+		ARTIFACTORY_LOGIN = credentials("artifactory_login")
 		DOCKER_TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
 		GITLAB_PRIVATE_TOKEN = credentials("ai-gitlab-api-token")
 	}
@@ -28,12 +29,37 @@ pipeline {
 					# Invoke pytest like this to make python add the current directory to the pythonpath:
 					# https://docs.pytest.org/en/latest/pythonpath.html#pytest-import-mechanisms-and-sys-path-pythonpath
 					python3 -m pytest --junitxml=test-results.xml
+					make-build-info
 				"""
 				junit "test-results.xml"
+				stash includes: "src/simple_search/_build_info.py", name: "build-stash"
+			}
+		}
+		stage("upload wheel package") {
+			agent {
+				docker {
+					label workerNode
+					image "docker.dbc.dk/build-env"
+					alwaysPull true
+				}
+			}
+			when {
+				branch "master"
+			}
+			steps {
+				unstash "build-stash"
+				sh """#!/usr/bin/env bash
+					set -xe
+					rm -rf dist
+					make-build-info
+					python3 setup.py egg_info --tag-build=${env.BUILD_NUMBER} bdist_wheel
+					twine upload -u $ARTIFACTORY_LOGIN_USR -p $ARTIFACTORY_LOGIN_PSW --repository-url https://artifactory.dbc.dk/artifactory/api/pypi/pypi-dbc dist/*
+				"""
 			}
 		}
 		stage("docker build") {
 			steps {
+				unstash "build-stash"
 				script {
 					image = docker.build(
 						"docker-xp.dbc.dk/simple-search:${DOCKER_TAG}", "--pull --no-cache .")
