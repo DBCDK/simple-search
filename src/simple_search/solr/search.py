@@ -21,7 +21,7 @@ class Searcher(object):
             "bq": "{!edismax qf=creator v=$q bq=}^10",
             "fl": "pids,title,creator,contributor,workid,work_type,language,pid_to_type_map,score",
             "sort": "score desc",
-            "boost": "n_pids",
+            "boost": "holdings",
         }
         debug_fields = ["title_alternative", "creator", "workid", "contributor", "work_type"]
         include_fields = ["pids", "title", "language"]
