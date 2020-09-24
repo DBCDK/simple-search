@@ -16,5 +16,6 @@ setup(name="simple-search",
             "solr-indexer = simple_search.solr.indexer:main",
             "pid-list-generator = simple_search.solr.pid_fetcher:main",
             "generate-work-to-holdings-map = simple_search.solr.indexer:generate_work_to_holdings_map",
+            "evaluate-search = simple_search.evaluation:main",
         ]}
     )
