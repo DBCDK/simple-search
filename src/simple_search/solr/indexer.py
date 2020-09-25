@@ -141,7 +141,8 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, limit=None):
                     "years_since_publication": years_since_publication}
 
         document.update(add_keys(metadata, ["title_alternative", "aut",
-            "creator", "creator_sort", "contributor", "work_type", "language", "subject_dbc"]))
+            "creator", "creator_sort", "contributor", "work_type",
+            "language", "subject_dbc", "series"]))
         document.update(add_keys(metadata, ["title"], is_list=False))
 
         yield document
