@@ -198,6 +198,7 @@ def main():
         level = logging.DEBUG
     logging.basicConfig(format="%(asctime)s : %(levelname)s : %(message)s", level=level)
 
+    logger.info('Loading holdings-map')
     with open(args.work_to_holdings_map_path, "rb") as fp:
         work_to_holdings = joblib.load(fp)
         create_collection(args.solr, args.pid_list, work_to_holdings, args.limit)
