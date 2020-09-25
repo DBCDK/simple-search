@@ -21,6 +21,7 @@ class Searcher(object):
             "bq": [
                 "{!edismax qf=creator v=$q bq=}^10",
                 "years_since_publication:[0 TO 10]^5",
+                "language:dan^5",
             ],
             "fl": "pids,title,creator,contributor,workid,work_type,language,pid_to_type_map,score",
             "sort": "score desc",
