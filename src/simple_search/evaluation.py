@@ -11,6 +11,7 @@ from tqdm import tqdm
 from search_relevance_eval.seca_2019 import get_all_query_and_rating_dataframes_from_file
 import search_relevance_eval.tools as tools
 import search_relevance_eval.metrics as metrics
+import search_relevance_eval.opensearch_query
 import matplotlib.pyplot as plt
 
 def setup_args() -> argparse.Namespace:
@@ -92,8 +93,20 @@ def main():
     search_results, search_test_dfs = perform_search(args.data_path, lambda q: simple_search(args.url, q))
     search_ratings = get_ratings(search_test_dfs)
 
+    open_search = search_relevance_eval.opensearch_query.OpenSearch(
+        "http://opensearch-5-2-ai-service.cisterne.svc.cloud.dbc.dk/b3.5_5.2/")
+    open_search_cisterne_results, open_search_cisterne_test_dfs = perform_search(args.data_path,
+        lambda q: [p for p in open_search(q)])
+    open_search_cisterne_ratings = get_ratings(open_search_cisterne_test_dfs)
+
     show_subset(search_ratings, search_results)
     plt.savefig(os.path.join(args.output_dir, "subset.png"))
 
     show_all(search_ratings, search_results)
     plt.savefig(os.path.join(args.output_dir, "all.png"))
+
+    show_subset(open_search_cisterne_ratings, open_search_cisterne_results)
+    plt.savefig(os.path.join(args.output_dir, "opensearch-subset.png"))
+
+    show_all(open_search_cisterne_ratings, open_search_cisterne_results)
+    plt.savefig(os.path.join(args.output_dir, "opensearch-all.png"))
