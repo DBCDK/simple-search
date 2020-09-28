@@ -16,7 +16,7 @@ class Searcher(object):
 
         params = {
             "defType": "edismax",
-            "qf": "creator_exact^200 title_exact^150 creator_and_title^100 creator^10 title^10 series^10 creator_phonetic^10 contributor contributor_phonetic subject_dbc",
+            "qf": "creator_exact^200 title_exact^150 creator_and_title^100 creator^10 title^10 series^10 creator_phonetic^10 contributor contributor_phonetic subject_dbc subject_synonyms",
             "pf": "creator^100 title^100 series^75 contributor^50 subject_dbc",
             "bq": [
                 "{!edismax qf=creator v=$q bq=}^10",
