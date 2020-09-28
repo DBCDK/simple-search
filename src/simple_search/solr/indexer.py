@@ -18,14 +18,14 @@ import datetime
 import math
 import os
 import sys
-
 import joblib
-from mobus import lowell_mapping_functions as lmf
 import logging
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
 
+from mobus import lowell_mapping_functions as lmf
+from simple_search.synonym_list import Synonyms
 import dbc_pyutils.solr
 import dbc_pyutils.cursor
 
@@ -94,7 +94,7 @@ def generate_work_to_holdings_map():
     with open(args.output, "wb") as fp:
         joblib.dump(work_to_holdings, fp)
 
-def make_solr_documents(pid_list, work_to_holdings_map: dict, limit=None):
+def make_solr_documents(pid_list, work_to_holdings_map: dict, synonym_container, limit=None):
     """
     Creates solr documents based on rows from LOWELL
 
@@ -143,9 +143,22 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, limit=None):
         document.update(add_keys(metadata, ["title_alternative", "aut",
             "creator", "creator_sort", "contributor", "work_type",
             "language", "subject_dbc", "series"]))
-        document.update(add_keys(metadata, ["title"], is_list=False))
 
+        synonyms = __construct_synonym_list(document, synonym_container)
+        if synonyms:
+            document['subject_synonyms'] = synonyms
+        document.update(add_keys(metadata, ["title"], is_list=False))
         yield document
+
+
+def __construct_synonym_list(document, synonym_container):
+    if 'subject_dbc' not in document:
+        return []
+    synonyms = []
+    for subject in document['subject_dbc']:
+        synonyms += synonym_container.get(subject, [])
+    return synonyms
+
 
 def get_years_since_publication(years):
     """
@@ -164,12 +177,14 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i: i+n]
 
-def create_collection(solr_url, pid_list, work_to_holdings_map, limit=None, batch_size=1000):
+def create_collection(solr_url, pid_list, work_to_holdings_map, synonym_file, limit=None, batch_size=1000):
     """
     Harvest rows from LOWELL and creates and indexes solr documents
     """
+    logger.info('Reading subject synonyms')
+    synonyms = Synonyms(synonym_file)
     logger.info("Retrieving data from db")
-    documents = [d for d in make_solr_documents(pid_list, work_to_holdings_map, limit)]
+    documents = [d for d in make_solr_documents(pid_list, work_to_holdings_map, synonyms, limit)]
     doc_chunks = [c for c in chunks(documents, batch_size)]
     logger.info(f"Created {len(doc_chunks)} document chunk (size={batch_size})")
     logger.info(f"Indexing into solr at {solr_url}")
@@ -186,6 +201,7 @@ def setup_args():
     parser.add_argument("work_to_holdings_map_path",
         metavar="work-to-holdings-map-path",
         help="Path to holdings file path, saved in joblib format")
+    parser.add_argument("synonym_file", metavar="synonym-file", help="file with subject synonyms")
     parser.add_argument("-l", "--limit", type=int, dest="limit", help="if set, limits the number of harvested loans")
     parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="verbose output")
     return parser.parse_args()
@@ -201,7 +217,7 @@ def main():
     logger.info('Loading holdings-map')
     with open(args.work_to_holdings_map_path, "rb") as fp:
         work_to_holdings = joblib.load(fp)
-        create_collection(args.solr, args.pid_list, work_to_holdings, args.limit)
+        create_collection(args.solr, args.pid_list, work_to_holdings, args.synonym_file, args.limit)
 
 if __name__ == "__main__":
     main()
