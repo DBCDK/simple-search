@@ -224,7 +224,7 @@ def main():
 
     with open(args.work_to_holdings_map_path, "rb") as fp,\
             popularity_file_opener(args.popularity_data, "rb") as popularity_fp:
-        popularity_map = __read_popularity_counts(fp)
+        popularity_map = __read_popularity_counts(popularity_fp)
         logger.info('Loading holdings-map')
         work_to_holdings = joblib.load(fp)
         create_collection(args.solr, args.pid_list, work_to_holdings,
