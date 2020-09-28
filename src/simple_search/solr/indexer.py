@@ -95,11 +95,7 @@ def generate_work_to_holdings_map():
     with open(args.output, "wb") as fp:
         joblib.dump(work_to_holdings, fp)
 
-<<<<<<< HEAD
-def make_solr_documents(pid_list, work_to_holdings_map: dict, synonym_container, limit=None):
-=======
-def make_solr_documents(pid_list, work_to_holdings_map: dict, popularity_map: dict, limit=None):
->>>>>>> master
+def make_solr_documents(pid_list, work_to_holdings_map: dict, popularity_map: dict, synonym_container, limit=None):
     """
     Creates solr documents based on rows from LOWELL
 
