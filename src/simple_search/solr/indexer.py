@@ -234,7 +234,7 @@ def main():
 def __read_popularity_counts(fp):
     logger.info("Loading popularity data")
     popularity_counts = []
-    for line in popularity_fp:
+    for line in fp:
         line = line.strip().decode("utf8")
         if " " not in line:
             continue
