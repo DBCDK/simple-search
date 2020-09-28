@@ -205,9 +205,9 @@ def setup_args():
     parser.add_argument("work_to_holdings_map_path",
         metavar="work-to-holdings-map-path",
         help="Path to holdings file path, saved in joblib format")
-    parser.add_argument("synonym_file", metavar="synonym-file", help="file with subject synonyms")
     parser.add_argument("popularity_data", metavar="popularity-data",
         help="path to file containing data (hit counts)")
+    parser.add_argument("synonym_file", metavar="synonym-file", help="file with subject synonyms")
     parser.add_argument("-l", "--limit", type=int, dest="limit", help="if set, limits the number of harvested loans")
     parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="verbose output")
     return parser.parse_args()
