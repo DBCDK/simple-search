@@ -15,6 +15,7 @@ import argparse
 import collections
 from collections import defaultdict
 import datetime
+import gzip
 import math
 import os
 import sys
@@ -203,12 +204,14 @@ def main():
         level = logging.DEBUG
     logging.basicConfig(format="%(asctime)s : %(levelname)s : %(message)s", level=level)
 
+    popularity_file_opener = gzip.open if args.popularity_data[-3:] == ".gz" else open
+
     with open(args.work_to_holdings_map_path, "rb") as fp,\
-            open(args.popularity_data) as popularity_fp:
+            popularity_file_opener(args.popularity_data, "rb") as popularity_fp:
         logger.info("Loading popularity data")
         popularity_counts = []
         for line in popularity_fp:
-            line = line.strip()
+            line = line.strip().decode("utf8")
             if " " not in line:
                 continue
             parts = line.split(" ", maxsplit=1)
