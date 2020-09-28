@@ -228,19 +228,25 @@ def main():
 
     with open(args.work_to_holdings_map_path, "rb") as fp,\
             popularity_file_opener(args.popularity_data, "rb") as popularity_fp:
-        logger.info("Loading popularity data")
-        popularity_counts = []
-        for line in popularity_fp:
-            line = line.strip().decode("utf8")
-            if " " not in line:
-                continue
-            parts = line.split(" ", maxsplit=1)
-            popularity_counts.append(parts)
-        popularity_map = {pid: int(count) for count, pid in popularity_counts}
+        popularity_map = __read_popularity_counts(fp)
         logger.info('Loading holdings-map')
         work_to_holdings = joblib.load(fp)
         create_collection(args.solr, args.pid_list, work_to_holdings,
                           popularity_map, args.synonym_file, args.limit)
+
+
+def __read_popularity_counts(fp):
+    logger.info("Loading popularity data")
+    popularity_counts = []
+    for line in popularity_fp:
+        line = line.strip().decode("utf8")
+        if " " not in line:
+            continue
+        parts = line.split(" ", maxsplit=1)
+        popularity_counts.append(parts)
+    popularity_map = {pid: int(count) for count, pid in popularity_counts}
+    return popularity_map
+
 
 if __name__ == "__main__":
     main()
