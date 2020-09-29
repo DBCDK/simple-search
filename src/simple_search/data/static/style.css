@@ -1,0 +1,82 @@
+* {
+	font-size: 105%;
+}
+
+ul {
+	list-style-type: none;
+}
+
+li:before {
+	content: "—"
+}
+
+.query-name .app-url {
+	padding-right: 5px;
+	padding-left: 5px;
+}
+
+a:link {
+	color: #1ea6e6;
+}
+
+a:visited {
+	color: #9a1fff;
+}
+
+a.bibdk {
+	text-align: left;
+}
+
+li.queries {
+	padding-bottom: 6px;
+}
+
+div.result_container {
+	border: solid;
+	margin: 5px;
+}
+
+div.result_container > div.result-block > p {
+	text-align: center;
+}
+
+div.result_container > div.result-block > p.creator {
+	font-style: italic;
+	margin: 0px;
+	padding: 0px;
+}
+
+div.result_container > div.result-block > p.title {
+	font-weight: bold;
+}
+
+div.result_container > div.result-block > div.pids > a {
+	font-size: 70%;
+}
+
+.main-container {
+	width: 100%;
+}
+
+.block {
+	width: 49%;
+	display: block;
+	float: left;
+}
+
+.query-input {
+	margin: 10px;
+	text-align: center;
+}
+
+div.result_container > div.result-block {
+	display: inline-block;
+	vertical-align: top;
+	text-align: center;
+	width: 49%;
+}
+
+img.result-image {
+	width: 50%;
+	height: 50%;
+}

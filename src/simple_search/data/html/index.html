@@ -1,365 +1,115 @@
 <!DOCTYPE html>
-<html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>React Local</title>
-  <script type="application/javascript" src="https://unpkg.com/react@16/umd/react.development.js"></script>
-  <script type="application/javascript" src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
-  <script type="application/javascript" src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" type="text/css" href="static/style.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script>
+		function send_query_from_form() {
+			let query = $("#query").val();
+			send_query(query);
+		}
+		function send_query(query) {
+			let data = {"q": query, "debug": true};
+			data = JSON.stringify(data);
+			$.post("/search", data)
+				.done(function(result) {
+					let results_div = $("#results");
+					let existing_children = results_div.children();
+					for(let i = 0; i < existing_children.length; i++) {
+						existing_children[i].remove();
+					}
+					results_div.show();
+					for(let i = 0; i < result["result"].length; i++) {
+						let child = make_result_item_container(result["result"][i]);
+						results_div.append(child);
+					}
+				});
+		}
+		function set_cover_url(pids, element) {
+			let main_future = $.Deferred();
+			let fetch_cover_url = function(pid) {
+				let future = $.Deferred();
+				$.get(`/cover/${pid}`).done(function(result) {
+					if(result.hasOwnProperty("url")) {
+						// This function uses the fact that a chain of promises breaks when one
+						// rejects to break when the correct url is found.
+						future.reject(result["url"]);
+					} else {
+						future.resolve();
+					}
+				});
+				return future.promise();
+			};
+			let next_future = main_future;
+			for(let i = 0; i < pids.length; i++) {
+				next_future = next_future.then(function() {
+					return fetch_cover_url(pids[i]).fail(function(url) {
+						element.attr("src", url);
+					});
+				});
+			}
+			main_future.resolve();
+		}
+		function make_result_item_container(result) {
+			let container = $('<div class="result_container">');
+			let container_left = $('<div class="result-block">')
+			let container_right = $('<div class="result-block">');
+			if(result["debug"]["creator"] !== undefined) {
+				for(let i = 0; i < result["debug"]["creator"].length; i++) {
+					let creator = $(`<p class="creator">${result["debug"]["creator"][i]}</p>`);
+					container_left.append(creator);
+				}
+			}
+			let title = $(`<p class="title">${result["title"]}</p>`);
+			container_left.append(title);
+			let pids = $('<div class="pids">');
+			for(let i = 0; i < result["pids"].length; i++) {
+				let pid = result["pids"][i];
+				pids.append(`<a class="bibdk" href=https://bibliotek.dk/work/${pid}>${pid}</a>`);
+				//pids.append(`<p>${pid}</p>`);
+			}
+			container_left.append(pids);
+			if(result["debug"]["work_type"] !== undefined) {
+				container_right.append(`<p>${result["debug"]["work_type"]}</p>`)
+			}
+			let image_container = $("<a>");
+			let image_element = $('<img class="result-image">');
+			set_cover_url(result["pids"], image_element);
+			image_container.append(image_element);
+			container_right.append(image_container);
+			container.append(container_left);
+			container.append(container_right);
+			return container;
+		}
+	</script>
 </head>
-
-
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-
-
-    class Image extends React.Component {
-	constructor() {
-	    super()
-	    this.state = {
-		pid: '',
-		url: '',
-		data: {}
-		
-	    };
-	};
-
-	componentDidMount() {
-	    this.fetchUrl(this.props.pid)
-	}
-
-	componentDidUpdate() {
-	    if (this.state.pid != this.props.pid) {
-		// console.log('CompUp:Change :  '+this.props.pid)
-		this.fetchUrl(this.props.pid)
-	    }
-	}
-	
-	fetchUrl = (pid) => {
-	            console.log('Call image: ' + pid)
-	    fetch('cover/'+pid)
-		.then(response => response.json())
-		.then(data =>
-		      this.setState({
-			  pid: pid,
-			  url: data.url,
-			  data: data,
-		      })
-		     )
-		.catch(error => this.setState({url: '', pid: ''}));
-	};
-	
-	render() {
-	    return (
-	     	    <a>
-                    <img src={this.state.url} width='100' height='100'/>
-                    </a>
-	    )
-	}
-    }
-    
-    class Types extends React.Component {
-	render() {
-	    const p = this.props;
-
-	    if (p.worktypes) {
-		return (
-		    p.worktypes.map((worktype, i) => <tr key={i} align='right'><td align='right'>{worktype}</td></tr>)
-		)
-	    } else {
-		return (
-		    <tr/>
-		)
-	    }
-	}
-    }
-    
-    class Creator extends React.Component {
-	render() {
-	    const p = this.props;
-
-	    if (p.creator) {
-		return (
-		    p.creator.map((creator, i) => <tr key={i}><td><i>{creator}</i></td></tr>)
-		)
-	    } else {
-		return (
-		    <tr/>
-		)
-	    }
-	}
-    }
-
-
-    class Pids extends React.Component {
-	render() {
-	    const p = this.props;
-
-	    if (p.pids) {
-		return (
-		    p.pids.map((pid, i) => <tr key={i}><td><i><a href={'https://bibliotek.dk/work/'+pid}>{pid}</a></i></td></tr>)
-		)
-	    } else {
-		return (
-			<tr/>
-		)
-	    }
-	}
-    }
-
-    
-    class Result extends React.Component {
-    
-	render() {
-	    const p = this.props;
-	    
-	    var mystyle = {
-		padding: '3px',
-		borderRadius: '10px',
-		borderWidth: '2px',
-		borderColor: 'blue',
-		borderStyle: 'solid'
-	    }
-	    
-	    return(
-    <div
-		style={mystyle}
-		onClick={this.handleClick}
-		    >
-		    <table width='100%'>
-		    <tbody>
-		    <tr>
-		    <td width='70%'>
-		    <table width='100%'>
-		    <tbody>
-		    <Creator creator={p.result.debug.creator}/>
-		    <tr>
-		    <td width='100%'>
-		    <b>{p.result.title}</b>
-		    </td>
-		    </tr>
-		    <Pids pids={p.result.pids}/>
-		    </tbody>
-		    </table>
-		    </td>
-		    <td width='10%' valign='top'>
-		    
-		    <table width='100%' valign='top'>
-		    <tbody>
-		    <Types worktypes={p.result.debug.work_type}/>
-		    </tbody>
-		    </table>
-
-		</td>
-		    <td width='20%'>
-		    <Image pid={p.result.pids[0]}/>
-		    </td>
-		    </tr>
-		    </tbody>
-		    </table>
-		    </div>
-	    )
-	};
-    };
-    
-    class ResultList extends React.Component {
-	resultClick = pid => {
-	    const p = this.props;
-	    console.log('ResultList: ' + pid)
-	    p.parentResultClick(pid)
-	}
-
-	render() {
-	    const p = this.props;
-
-	    var mystyle = {
-		margin: 'auto'
-	    }
-
-	    return(
-		    <React.Fragment>
-		    <table style={mystyle} width='100%'>
-		      <tbody>
-			{p.results.map((result, i) => <tr key={i}><td><Result result={result}/></td></tr>)}
-		</tbody>
-		    </table>
-		    </React.Fragment>
-	    );
-	};
-    };
-
-    class SearchLayout extends React.Component {
-	constructor() {
-	    super()
-	    this.state = {
-		query: 'hest',
-		last_query: '',
-		results: [],
-	    };
-	};
-	handleSubmit = evt => {
-	    evt.preventDefault()
-	    this.handleClick()
-	}
-	
-	handleClick = () => {
-	    var query = this.state.query;
-	    if (query) {
-		this.handleSearch(query)
-	    }
-	};
-	handleSearch = (query) => {
-	    console.log('Call search: ' + query)
-	    const requestOptions = {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({q: query, debug: true}),
-	    }
-	    fetch('search', requestOptions)
-		.then(response => response.json())
-		.then(data =>
-		      this.setState({
-			  last_query: query,
-			  query: '',
-			  results: data.result
-		      })
-		     )
-		.catch(error => this.setState({results: []}));
-	};
-	render() {
-	    return(
-		    <React.Fragment>
-		    <div align='center' valign='top'>
-		    <form onSubmit={this.handleSubmit}>
-		    <input
-		type='text'
-		value={this.state.query}
-		onChange={event => this.setState({ query: event.target.value })}
-		onSubmit={this.handleClick}
-		    />
-		    <input type='button' onClick={this.handleClick} value='Go'/>
-		    </form>
-		    </div>
-		    <table align='center' valign='top'>
-		    <tbody>
-		    <tr>
-		    <td valign='top'>
-		    <div align='center' valign='top'>Query: {this.state.last_query}</div>
-		    <ResultList results={this.state.results}/>
-		    </td>
-		    </tr>
-		    </tbody>
-		    </table>
-		    </React.Fragment>
-	    )
-	};
-    };
-
-    class QueryElement extends React.Component {
-
-	handleClick = () => {
-	    console.log('Click: '+this.props.query);
-	    this.props.parentHandleQuery(this.props.query);
-	}
-
-	render() {
-	    var mystyle = {
-		padding: '3px',
-		borderRadius: '10px',
-		borderWidth: '2px',
-		borderColor: 'green',
-		borderStyle: 'solid'
-	    }
-
-	    return(
-		    <tr>
-		    <td>
-		    <div style={mystyle} onClick={this.handleClick}>
-		    {this.props.query}
+	<div class=query-input>
+		<form id="query-input-form">
+			Query: <input id="query" type="text"/>
+			<button onClick=send_query_from_form()>Søg</button>
+		</form>
+	</div>
+	<div class="main-container">
+		<p>Queries</p>
+		<div class="block">
+		{% for q in queries %}
+			<li class="queries">
+			<span class="query-name">{{q}}</span>
+			</li>
+		{% end %}
 		</div>
-		    </td>
-		    </tr>
-	    )
-	}
-    }
-
-    class ConfigLayout extends React.Component {
-	constructor() {
-	    super()
-	    this.state = {
-		queries: [],
-	    };
-	};
-
-	handleQuery = (query) => {
-	    console.log('CL: '+query)
-	    this.props.parentHandleQuery(query);
-	}
-
-	fetchConfig = () => {
-	    console.log('Call config')
-	    fetch('config')
-		.then(response => response.json())
-		.then(data =>
-		      this.setState({
-			  queries: data.queries
-		      })
-		     )
-		.catch(error => this.setState({queries: []}));
-	};
-
-	componentDidMount() {
-	    this.fetchConfig()
-	}
-	
-	render() {
-	    return(
-		    <table width='100%' valign='top' align='left'>
-		    <tbody>
-		    <tr align='center'><td><b>Common Queries:</b></td></tr>
-		    {this.state.queries.map((query, i) => <QueryElement key={i} query={query} parentHandleQuery={this.handleQuery}/>)}
-		</tbody>
-		    </table>
-	    )
-	}
-    }
-		    
-    class Layout extends React.Component {
-
-	handleQuery = (query) => {
-	    console.log('Layout: '+query)
-	    this.refs.search.handleSearch(query)
-	}
-	
-	render() {
-	    const p = this.props;
-	    return(
-		    <React.Fragment>
-		    <table height="100%" width="100%">
-		    <tbody>
-		    <tr>
-		    <td width='20%' valign='top'>
-		    <ConfigLayout parentHandleQuery={this.handleQuery}/>
-		    </td>
-		    <td width="90%" valign='top'>
-		    <SearchLayout ref='search'/>
-		    </td>
-		    </tr>
-		    </tbody>
-		    </table>
-		    </React.Fragment>
-	    )
-	};
-    };
-    
-    ReactDOM.render(<Layout />, document.getElementById("root"));
-  </script>
-
+		<div id="results" class="block">
+		</div>
+	</div>
+	<script>
+		$("#query-input-form").on("submit", function(event) {
+			event.preventDefault();
+			send_query_from_form();
+			return false;
+		})
+		$(".query-name").on("click", function(event) {
+			send_query(event.target.textContent);
+		});
+	</script>
 </body>
-
-</html>
-    

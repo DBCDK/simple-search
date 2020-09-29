@@ -46,7 +46,7 @@ class CoverHandler(BaseHandler):
 class ConfigHandler(BaseHandler):
 
     def get(self):
-        config_filename = 'cfg/search_results_tester_config.json'
+        config_filename = 'data/cfg/search_results_tester_config.json'
         config_path = resource_filename('simple_search', config_filename)
         queries = []
         with open(config_path, 'r') as f:
@@ -77,14 +77,16 @@ class SearchHandler(BaseHandler):
 
 class DefaultHandler(BaseHandler):
     def get(self):
-        path = resource_filename('simple_search', 'html/index.html')
-        print('Hello')
-        self.render(path)
-
+        with open(resource_filename("simple_search",
+                "data/cfg/search_results_tester_config.json")) as fp:
+            config = json.load(fp)
+            queries = [query["q"] for query in config["queries"]]
+        path = resource_filename("simple_search", "data/html/index.html")
+        self.render(path, queries=queries)
 
 class APIHandler(BaseHandler):
     def get(self):
-        path = resource_filename('simple_search', 'html/help.html')
+        path = resource_filename('simple_search', 'data/html/help.html')
         self.render(path)
 
 
@@ -93,11 +95,13 @@ def main():
     info = build_info.get_info("simple_search")
     searcher = Searcher(args.solr_url)
     tornado_app = tornado.web.Application([
-        ("/", DefaultHandler, {}),
+        ("/", DefaultHandler),
         ("/config", ConfigHandler),
         ("/api", APIHandler),
         ("/cover/(.*)", CoverHandler),
         ("/search", SearchHandler, {"searcher": searcher}),
+        ("/static/(.*)", tornado.web.StaticFileHandler,
+            {"path": os.path.join(resource_filename("simple_search", "data"), "static")}),
         ("/status", StatusHandler, {"ab_id": 1, "info": info, "statistics": list(STATS.values())})
     ])
     tornado_app.listen(args.port)
