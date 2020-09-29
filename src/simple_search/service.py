@@ -63,7 +63,8 @@ class SearchHandler(BaseHandler):
         body = json.loads(self.request.body.decode("utf8"))
         query = body["q"]
         debug = body.get("debug", False)
-        result = {"result": [doc for doc in self.searcher.search(query, debug)]}
+        options = body.get("options", {})
+        result = {"result": [doc for doc in self.searcher.search(query, debug, options)]}
         self.write(result)
 
     def get(self):
