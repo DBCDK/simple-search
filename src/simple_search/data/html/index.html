@@ -9,7 +9,10 @@
 			send_query(query);
 		}
 		function send_query(query) {
-			let data = {"q": query, "debug": true};
+			let options = {
+				"include-phonetic-creator": $("#include-phonetic-creator").is(":checked"),
+			};
+			let data = {"q": query, "debug": true, "options": options};
 			data = JSON.stringify(data);
 			$.post("/search", data)
 				.done(function(result) {
@@ -97,6 +100,10 @@
 			<span class="query-name">{{q}}</span>
 			</li>
 		{% end %}
+		</div>
+		<div>
+			<input type="checkbox" id="include-phonetic-creator">
+			<label for="include-phonetic-creator">Inkluder fonetiske creator- og contributor-navne</label>
 		</div>
 		<div id="results" class="block">
 		</div>
