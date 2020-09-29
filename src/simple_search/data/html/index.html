@@ -66,7 +66,6 @@
 			for(let i = 0; i < result["pids"].length; i++) {
 				let pid = result["pids"][i];
 				pids.append(`<a class="bibdk" href=https://bibliotek.dk/work/${pid}>${pid}</a>`);
-				//pids.append(`<p>${pid}</p>`);
 			}
 			container_left.append(pids);
 			if(result["debug"]["work_type"] !== undefined) {
