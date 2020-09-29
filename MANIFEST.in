@@ -1,1 +1,1 @@
-recursive-include src/filmstriben_recommender/data *
+recursive-include src/simple_search/data *
