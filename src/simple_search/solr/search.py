@@ -7,12 +7,7 @@ class Searcher(object):
         self.solr = dbc_pyutils.solr.Solr(solr_url)
 
     def search(self, phrase, debug=False, options:dict={}):
-        phrase = phrase.strip()
-#        combined_creator_title_query = f'(creator_and_title:"{phrase}"^250 OR creator_and_title:({phrase})^100)'
-#        title_search_query = f'(meta_title:"{phrase}"^250 OR ({make_truncated_query(phrase, "title")})^100 OR meta_title:({phrase})^10 OR meta_title:({phrase}~1)^5)',
-#        creator_search_query = f'(creator:"{phrase}"^250 OR ({make_truncated_query(phrase, "creator")})^100 OR creator:({phrase})^10 OR creator:({phrase}~1)^5 OR contributor:"{phrase}"^250 OR ({make_truncated_query(phrase, "contributor")})^100 OR contributor:({phrase})^10 OR contributor:({phrase}~1)^1)',
-#        query = f"{combined_creator_title_query} OR {title_search_query} OR {creator_search_query}"
-        query = phrase
+        query = phrase.strip()
         phonetic_creator_contributor = ""
         if "include-phonetic-creator" in options and options["include-phonetic-creator"]:
             phonetic_creator_contributor = "creator_phonetic^10 contributor_phonetic"
