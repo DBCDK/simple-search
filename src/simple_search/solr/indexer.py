@@ -133,9 +133,10 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, popularity_map: di
         n_pids = math.log(len(pids) if len(pids) <9 else 9)+1
         metadata = work2metadata[work]
         years_since_publication = get_years_since_publication(metadata["year"]) if "year" in metadata else 99
-        holdings = math.log(int(work_to_holdings_map[work])) if work in work_to_holdings_map else 0
+        # Add one to holdings and popularity to avoid zeros since boosting is multiplicative
+        holdings = math.log(int(work_to_holdings_map[work])) + 1 if work in work_to_holdings_map else 1
         popularity_sum = sum(popularity_map[pid] for pid in pids if pid in popularity_map)
-        popularity = math.log(popularity_sum) if popularity_sum > 0 else 0
+        popularity = math.log(popularity_sum) + 1 if popularity_sum > 0 else 1
         document = {"workid": work,
                     "pids": pids,
                     "pid_to_type_map": pid_types_list,
