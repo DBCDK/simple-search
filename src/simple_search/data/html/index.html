@@ -66,9 +66,11 @@
 			let title = $(`<p class="title">${result["title"]}</p>`);
 			container_left.append(title);
 			let pids = $('<div class="pids">');
+			let pids_list = $('<ul class="pid-list">');
+			pids.append(pids_list);
 			for(let i = 0; i < result["pids"].length; i++) {
 				let pid = result["pids"][i];
-				pids.append(`<a class="bibdk" href=https://bibliotek.dk/work/${pid}>${pid}</a>`);
+				pids_list.append(`<li><a class="bibdk" href=https://bibliotek.dk/work/${pid}>${pid}</a></li>`);
 			}
 			container_left.append(pids);
 			if(result["debug"]["work_type"] !== undefined) {

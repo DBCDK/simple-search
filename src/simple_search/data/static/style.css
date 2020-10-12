@@ -6,6 +6,10 @@ ul {
 	list-style-type: none;
 }
 
+ul.pid-list {
+	font-size: 50%;
+}
+
 li:before {
 	content: "—"
 }
