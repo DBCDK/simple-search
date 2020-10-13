@@ -4,6 +4,7 @@ import json
 
 import argparse
 import pandas as pd
+import plotnine as p9
 import numpy as np
 import os
 import requests
@@ -87,17 +88,30 @@ def simple_search(url, query):
     pids = [d["pids"][0] for d in resp["result"]]
     return pids
 
+def plot_result_stats(results, title):
+    stats = results.describe().unstack().reset_index().rename(
+        columns={"level_0": "metric", "level_1": "group", 0: "value"})
+    stats = stats[~stats["group"].isin(["count", "min", "max"])]
+    plot = p9.ggplot(stats) + p9.aes("metric", "value",
+        fill="group") + p9.geom_col(position="dodge") +\
+        p9.theme_bw() + p9.ggtitle(title)
+    return plot
+
 def main():
     args = setup_args()
     os.makedirs(args.output_dir, exist_ok=True)
     search_results, search_test_dfs = perform_search(args.data_path, lambda q: simple_search(args.url, q))
     search_ratings = get_ratings(search_test_dfs)
+    plot_simple_search_results = plot_result_stats(search_results, "Simple search")
+    plot_simple_search_results.save(os.path.join(args.output_dir, "simple-search-result-stats.png"))
 
     open_search = search_relevance_eval.opensearch_query.OpenSearch(
         "http://opensearch-5-2-ai-service.cisterne.svc.cloud.dbc.dk/b3.5_5.2/")
     open_search_cisterne_results, open_search_cisterne_test_dfs = perform_search(args.data_path,
         lambda q: [p for p in open_search(q)])
     open_search_cisterne_ratings = get_ratings(open_search_cisterne_test_dfs)
+    plot_open_search_results = plot_result_stats(search_results, "Open Search")
+    plot_open_search_results.save(os.path.join(args.output_dir, "open-search-result-stats.png"))
 
     show_subset(search_ratings, search_results)
     plt.savefig(os.path.join(args.output_dir, "subset.png"))
@@ -110,3 +124,5 @@ def main():
 
     show_all(open_search_cisterne_ratings, open_search_cisterne_results)
     plt.savefig(os.path.join(args.output_dir, "opensearch-all.png"))
+
+    print(f"Simple search:\n{search_results.describe()}\nOpen Search:\n{open_search_cisterne_results.describe()}")
