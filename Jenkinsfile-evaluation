@@ -34,7 +34,7 @@ pipeline {
 					pip install .
 					evaluate-search http://simple-search-evaluation-1-0.mi-prod.svc.cloud.dbc.dk/search seca2019 output
 				"""
-				archiveArtifacts artifacts: "output/*.png"
+				archiveArtifacts artifacts: "output/*.png,src/simple_search/data/html/evaluation.html"
 			}
 		}
 	}
