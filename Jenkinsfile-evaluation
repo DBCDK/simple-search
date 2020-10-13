@@ -32,7 +32,7 @@ pipeline {
 					source env/bin/activate
 					pip install -U pip search-relevance-eval matplotlib
 					pip install .
-					evaluate-search http://simple-search-bibdk-1-0.mi-prod.svc.cloud.dbc.dk/search seca2019 output
+					evaluate-search http://simple-search-evaluation-1-0.mi-prod.svc.cloud.dbc.dk/search seca2019 output
 				"""
 				archiveArtifacts artifacts: "output/*.png"
 			}
