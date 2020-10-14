@@ -92,9 +92,15 @@ def plot_result_stats(results, title):
     stats = results.describe().unstack().reset_index().rename(
         columns={"level_0": "metric", "level_1": "group", 0: "value"})
     stats = stats[~stats["group"].isin(["count", "min", "max"])]
-    plot = p9.ggplot(stats) + p9.aes("metric", "value",
-        fill="group") + p9.geom_col(position="dodge") +\
-        p9.theme_bw() + p9.ggtitle(title)
+    stats["value_presentation"] = round(stats["value"], 2)
+    plot = (p9.ggplot(stats) +
+        p9.aes("metric", "value", fill="group") +
+        p9.geom_col(position="dodge") +
+        p9.theme_bw() +
+        p9.ggtitle(title) +
+        p9.geom_text(p9.aes(label="value_presentation"),
+        position=p9.position_dodge(width=0.9), va="bottom")
+    )
     return plot
 
 def main():
@@ -102,8 +108,11 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     search_results, search_test_dfs = perform_search(args.data_path, lambda q: simple_search(args.url, q))
     search_ratings = get_ratings(search_test_dfs)
+
+    img_save_args = {"width": 10, "height": 7.5, "dpi": 175}
     plot_simple_search_results = plot_result_stats(search_results, "Simple search")
-    plot_simple_search_results.save(os.path.join(args.output_dir, "simple-search-result-stats.png"))
+    plot_simple_search_results.save(os.path.join(args.output_dir,
+        "simple-search-result-stats.png"), **img_save_args)
 
     open_search = search_relevance_eval.opensearch_query.OpenSearch(
         "http://opensearch-5-2-ai-service.cisterne.svc.cloud.dbc.dk/b3.5_5.2/")
@@ -111,7 +120,8 @@ def main():
         lambda q: [p for p in open_search(q)])
     open_search_cisterne_ratings = get_ratings(open_search_cisterne_test_dfs)
     plot_open_search_results = plot_result_stats(search_results, "Open Search")
-    plot_open_search_results.save(os.path.join(args.output_dir, "open-search-result-stats.png"))
+    plot_open_search_results.save(os.path.join(args.output_dir,
+        "open-search-result-stats.png"), **img_save_args)
 
     show_subset(search_ratings, search_results)
     plt.savefig(os.path.join(args.output_dir, "subset.png"))
