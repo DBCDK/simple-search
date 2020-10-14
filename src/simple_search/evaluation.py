@@ -61,9 +61,9 @@ def get_ratings(test_dfs, p_len=15):
     ratings_ = ratings_.T
     return ratings_
 
-def show_subset(ratings, results, n=15, cmap=plt.cm.Greens):
+def show_subset(ratings, results, n=15, cmap=plt.cm.Greens, size=20):
     """ Figure of the first n searches """
-    plt.rcParams['figure.figsize'] = [20, 20]
+    plt.rcParams['figure.figsize'] = [size, size]
     fig, ax = plt.subplots()
     ax.matshow(ratings[:,:n], cmap=cmap)
 
@@ -74,9 +74,9 @@ def show_subset(ratings, results, n=15, cmap=plt.cm.Greens):
 
     plt.xticks(range(n), results['query'][:n], rotation='vertical')
 
-def show_all(ratings, results, cmap=plt.cm.Greens):
+def show_all(ratings, results, cmap=plt.cm.Greens, size=20):
     """ Figure of all searches """
-    plt.rcParams['figure.figsize'] = [20, 20]
+    plt.rcParams['figure.figsize'] = [size, size]
     fig, ax = plt.subplots()
     ax.matshow(ratings, cmap=cmap)
     plt.xticks(range(len(results)), results['query'], rotation='vertical')
@@ -124,16 +124,18 @@ def main():
     plot_open_search_results.save(os.path.join(args.output_dir,
         "open-search-result-stats.png"), **img_save_args)
 
-    show_subset(search_ratings, search_results)
-    plt.savefig(os.path.join(args.output_dir, "subset.png"))
+    save_fig = lambda name: plt.savefig(os.path.join(args.output_dir, name), bbox_inches="tight")
 
-    show_all(search_ratings, search_results)
-    plt.savefig(os.path.join(args.output_dir, "all.png"))
+    show_subset(search_ratings, search_results, size=10)
+    save_fig("subset.png")
 
-    show_subset(open_search_cisterne_ratings, open_search_cisterne_results)
-    plt.savefig(os.path.join(args.output_dir, "opensearch-subset.png"))
+    show_all(search_ratings, search_results, size=10)
+    save_fig("all.png")
 
-    show_all(open_search_cisterne_ratings, open_search_cisterne_results)
-    plt.savefig(os.path.join(args.output_dir, "opensearch-all.png"))
+    show_subset(open_search_cisterne_ratings, open_search_cisterne_results, size=10)
+    save_fig("opensearch-subset.png")
+
+    show_all(open_search_cisterne_ratings, open_search_cisterne_results, size=10)
+    save_fig("opensearch-all.png")
 
     print(f"Simple search:\n{search_results.describe()}\nOpen Search:\n{open_search_cisterne_results.describe()}")
