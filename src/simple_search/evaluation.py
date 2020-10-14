@@ -119,7 +119,8 @@ def main():
     open_search_cisterne_results, open_search_cisterne_test_dfs = perform_search(args.data_path,
         lambda q: [p for p in open_search(q)])
     open_search_cisterne_ratings = get_ratings(open_search_cisterne_test_dfs)
-    plot_open_search_results = plot_result_stats(search_results, "Open Search")
+    plot_open_search_results = plot_result_stats(open_search_cisterne_results,
+        "Open Search")
     plot_open_search_results.save(os.path.join(args.output_dir,
         "open-search-result-stats.png"), **img_save_args)
 
