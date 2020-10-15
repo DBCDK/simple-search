@@ -7,6 +7,9 @@ pipeline {
 	environment {
 		LOWELL_URL = credentials("lowell_db_connection_string")
 	}
+	triggers {
+		cron("0 5 * * *")
+	}
 	options {
 		timestamps()
 	}

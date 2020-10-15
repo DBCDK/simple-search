@@ -9,6 +9,9 @@ pipeline {
 		DOCKER_TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
 		GITLAB_PRIVATE_TOKEN = credentials("ai-gitlab-api-token")
 	}
+	triggers {
+		pollSCM("H/02 * * * *")
+	}
 	stages {
 		stage("test") {
 			agent {
