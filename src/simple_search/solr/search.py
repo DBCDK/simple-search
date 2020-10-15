@@ -6,7 +6,7 @@ class Searcher(object):
     def __init__(self, solr_url):
         self.solr = dbc_pyutils.solr.Solr(solr_url)
 
-    def search(self, phrase, debug=False, options:dict={}):
+    def search(self, phrase, debug=False, options:dict={}, rows=10):
         query = phrase.strip()
         phonetic_creator_contributor = ""
         if "include-phonetic-creator" in options and options["include-phonetic-creator"]:
@@ -25,6 +25,7 @@ class Searcher(object):
             # Submitting multiple values can be achived by specifying lists.
             # "boost": ["holdings", "popularity"] will result in &boost=holdings&boost=popularity
             "boost": ["holdings", "popularity"],
+            "rows": rows,
         }
         debug_fields = ["title_alternative", "creator", "workid", "contributor", "work_type"]
         include_fields = ["pids", "title", "language"]

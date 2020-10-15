@@ -63,15 +63,17 @@ class SearchHandler(BaseHandler):
         body = json.loads(self.request.body.decode("utf8"))
         query = body["q"]
         debug = body.get("debug", False)
+        rows = body.get("rows", 10)
         options = body.get("options", {})
-        result = {"result": [doc for doc in self.searcher.search(query, debug, options)]}
+        result = {"result": [doc for doc in self.searcher.search(query, debug, options, rows)]}
         self.write(result)
 
     def get(self):
         query = self.get_argument('q')
         debug = self.get_argument('debug', 'False')
         debug = True if debug.lower() in {'true', '1'} else False
-        result = {"result": [doc for doc in self.searcher.search(query, debug)]}
+        rows = int(self.get_argument("rows", "10"))
+        result = {"result": [doc for doc in self.searcher.search(query, debug, rows)]}
         self.write(result)
 
 
