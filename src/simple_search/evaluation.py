@@ -81,8 +81,8 @@ def show_all(ratings, results, cmap=plt.cm.Greens, size=20):
     ax.matshow(ratings, cmap=cmap)
     plt.xticks(range(len(results)), results['query'], rotation='vertical')
 
-def simple_search(url, query):
-    r = requests.post(url, data=json.dumps({"q": query}))
+def simple_search(url, query, rows=10):
+    r = requests.post(url, data=json.dumps({"q": query, "rows": rows}))
     r.raise_for_status()
     resp = r.json()
     pids = [d["pids"][0] for d in resp["result"]]
@@ -106,7 +106,7 @@ def plot_result_stats(results, title):
 def main():
     args = setup_args()
     os.makedirs(args.output_dir, exist_ok=True)
-    search_results, search_test_dfs = perform_search(args.data_path, lambda q: simple_search(args.url, q))
+    search_results, search_test_dfs = perform_search(args.data_path, lambda q: simple_search(args.url, q, 15))
     search_ratings = get_ratings(search_test_dfs)
 
     img_save_args = {"width": 10, "height": 7.5, "dpi": 175}
