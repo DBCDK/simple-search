@@ -31,6 +31,9 @@ def perform_search(data_path, query_fun):
     test_dfs = []
 
     for query, ground_truth_df in tqdm(get_all_query_and_rating_dataframes_from_file(f'{data_path}/master.csv')):
+        if not isinstance(query, str):
+            print(f"Ignoring invalid query {query}")
+            continue
         search_result = query_fun(query)
         pid2work = tools.pid2work(set(search_result + ground_truth_df.pid.tolist()))
         search_result = [pid2work[p] for p in search_result]
