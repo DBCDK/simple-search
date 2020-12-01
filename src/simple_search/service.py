@@ -73,7 +73,7 @@ class SearchHandler(BaseHandler):
         debug = self.get_argument('debug', 'False')
         debug = True if debug.lower() in {'true', '1'} else False
         rows = int(self.get_argument("rows", "10"))
-        result = {"result": [doc for doc in self.searcher.search(query, debug, rows)]}
+        result = {"result": [doc for doc in self.searcher.search(query, debug, rows=rows)]}
         self.write(result)
 
 
