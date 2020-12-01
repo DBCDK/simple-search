@@ -15,12 +15,13 @@ from dbc_pyutils import StatusHandler
 from dbc_pyutils import build_info
 from dbc_pyutils import Statistics
 from dbc_pyutils import CoverUrls
+import rrflow.utils
 
 from .solr.search import Searcher
 
 STATS = {"search": Statistics(name="search")}
 
-logger = logging.getLogger(__name__)
+logger = rrflow.utils.setup_logging()
 
 def setup_args():
     parser = argparse.ArgumentParser()
