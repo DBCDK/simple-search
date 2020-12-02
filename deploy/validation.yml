@@ -4,3 +4,9 @@
   data: '{"q": "harry potter"}'
   response:
     status_code: 200
+- validation:
+  path: /search
+  method: post
+  data: '{"q": "harry potter", "rows": 100, "start": 5, "debug": true}'
+  response:
+    status_code: 200

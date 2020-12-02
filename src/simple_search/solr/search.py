@@ -6,7 +6,7 @@ class Searcher(object):
     def __init__(self, solr_url):
         self.solr = dbc_pyutils.solr.Solr(solr_url)
 
-    def search(self, phrase, debug=False, options:dict={}, rows=10):
+    def search(self, phrase, debug=False, *, options:dict={}, rows=10, start=0):
         query = phrase.strip()
         phonetic_creator_contributor = ""
         if "include-phonetic-creator" in options and options["include-phonetic-creator"]:
@@ -26,6 +26,7 @@ class Searcher(object):
             # "boost": ["holdings", "popularity"] will result in &boost=holdings&boost=popularity
             "boost": ["holdings", "popularity"],
             "rows": rows,
+            "start": start,
         }
         debug_fields = ["title_alternative", "creator", "workid", "contributor", "work_type"]
         include_fields = ["pids", "title", "language"]
