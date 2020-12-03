@@ -111,6 +111,7 @@ def plot_result_stats(results, title):
         p9.aes("metric", "value", fill="group") +
         p9.geom_col(position="dodge") +
         p9.theme_bw() +
+        p9.coord_cartesian(ylim=[0, 1.0]) +
         p9.ggtitle(title) +
         p9.geom_text(p9.aes(label="value_presentation"),
         position=p9.position_dodge(width=0.9), va="bottom")
