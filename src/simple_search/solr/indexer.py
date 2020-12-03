@@ -24,13 +24,16 @@ import logging
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-
+from functools import partial
 from mobus import lowell_mapping_functions as lmf
 from simple_search.synonym_list import Synonyms
-import dbc_pyutils.solr
 import dbc_pyutils.cursor
-
+from dbc_pyutils import Time, ThreadedSolrIndexer
 logger = logging.getLogger(__name__)
+
+# Disable tqdm when building on jenkins, as it does not implement \r, and you'll get some messy output
+tqdm = partial(tqdm, ncols=150, disable=(not sys.stdout.isatty()))
+
 
 def map_work_to_metadata(docs, pid2work):
     """
@@ -38,12 +41,12 @@ def map_work_to_metadata(docs, pid2work):
     dictionary with the collected information
     """
     work2metadata = defaultdict(list)
-    for pid, work in tqdm(pid2work.items(), ncols=150):
+    for pid, work in tqdm(pid2work.items()):
         if pid in docs:
             work2metadata[work].append(docs[pid])
     work2metadata_union = {}
     logger.info("Fetching work metadata")
-    for work, metadata_entries in tqdm(work2metadata.items(), ncols=150):
+    for work, metadata_entries in tqdm(work2metadata.items()):
         metadata_union = defaultdict(set)
         for metadata in metadata_entries:
             for key, value in metadata.items():
@@ -190,12 +193,12 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, popularity_map: 
     synonyms = Synonyms(synonym_file)
     logger.info("Retrieving data from db")
     documents = [d for d in make_solr_documents(pid_list, work_to_holdings_map, popularity_map, synonyms, limit)]
-    doc_chunks = [c for c in chunks(documents, batch_size)]
-    logger.info(f"Created {len(doc_chunks)} document chunk (size={batch_size})")
-    logger.info(f"Indexing into solr at {solr_url}")
-    indexer = dbc_pyutils.solr.SolrIndexer(solr_url)
-    for batch in tqdm(doc_chunks, ncols=150):
-        indexer(batch)
+
+    indexer = ThreadedSolrIndexer(solr_url, num_threads=10, batch_size=batch_size)
+    with Time("Indexing into solr took ", level="info"):
+        logger.info(f"Indexing into solr at {solr_url}")
+        indexer.index(documents)
+    logger.info('Comitting documents')
     indexer.commit()
 
 def setup_args():
