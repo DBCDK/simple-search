@@ -74,21 +74,21 @@ def show_subset(ratings, results, n=15, cmap=plt.cm.Greens, size=20):
     """ Figure of the first n searches """
     plt.rcParams['figure.figsize'] = [size, size]
     fig, ax = plt.subplots()
-    ax.matshow(ratings[:,:n], cmap=cmap)
+    ax.matshow(ratings[:,:n].T, cmap=cmap)
 
     for i in range(n):
         for j in range(ratings.shape[0]):
             c = ratings[j,i]
             ax.text(i, j, str(c), va='center', ha='center')
 
-    plt.xticks(range(n), results['query'][:n], rotation='vertical')
+    plt.yticks(range(n), results['query'][:n], rotation="horizontal")
 
 def show_all(ratings, results, cmap=plt.cm.Greens, size=20):
     """ Figure of all searches """
     plt.rcParams['figure.figsize'] = [size, size]
     fig, ax = plt.subplots()
-    ax.matshow(ratings, cmap=cmap)
-    plt.xticks(range(len(results)), results['query'], rotation='vertical')
+    ax.matshow(ratings.T, cmap=cmap)
+    plt.yticks(range(len(results)), results['query'], rotation="horizontal")
 
 def simple_search(url, query, rows=10):
     r = requests.post(url, data=json.dumps({"q": query, "rows": rows}))
