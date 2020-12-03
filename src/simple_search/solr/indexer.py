@@ -15,6 +15,7 @@ import argparse
 import collections
 from collections import defaultdict
 import datetime
+from multiprocessing import Pool
 import gzip
 import math
 import os
@@ -28,6 +29,7 @@ from functools import partial
 from mobus import lowell_mapping_functions as lmf
 from simple_search.synonym_list import Synonyms
 import dbc_pyutils.cursor
+
 from dbc_pyutils import Time, ThreadedSolrIndexer
 logger = logging.getLogger(__name__)
 
@@ -98,6 +100,30 @@ def generate_work_to_holdings_map():
     with open(args.output, "wb") as fp:
         joblib.dump(work_to_holdings, fp)
 
+
+def merge_dicts(dictionaries):
+    d = {}
+    for dictionary in dictionaries:
+        d.update(dictionary)
+    return d
+
+
+def __get_data(pids):
+    pid2work = lmf.pid2work(pids)
+    docs = {r[0]: r[1] for r in get_documents(
+            "SELECT pid, metadata FROM metadata WHERE pid IN %s", (tuple(pids),))}
+    return pid2work, docs
+
+
+def get_data(pids, num_workers=16):
+    logger.info('Fetching data from db in %d worker processes', num_workers)
+    args = np.array_split(pids, num_workers)
+    with Pool(num_workers) as p:
+        result = p.map(__get_data, args)
+    pid2work, metadata = zip(*result)
+    return merge_dicts(pid2work), merge_dicts(metadata)
+
+
 def make_solr_documents(pid_list, work_to_holdings_map: dict, popularity_map: dict, synonym_container, limit=None):
     """
     Creates solr documents based on rows from LOWELL
@@ -107,10 +133,10 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, popularity_map: di
     """
     with open(pid_list) as fp:
         pids = [f.strip() for f in fp][:limit]
-    pid2work = lmf.pid2work(pids)
-    logger.info("pid2work size %s", len(pid2work))
-    docs = {r[0]: r[1] for r in get_documents(
-        "SELECT pid, metadata FROM metadata WHERE pid IN %s", (tuple(pids),))}
+    logger.info("Retrieving data from db")
+
+    with Time('Fetching data took', level='info'):
+        pid2work, docs = get_data(pids)
     logger.info("size of docs %s", len(docs))
 
     work2metadata = map_work_to_metadata(docs, pid2work)
@@ -191,7 +217,6 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, popularity_map: 
     """
     logger.info('Reading subject synonyms')
     synonyms = Synonyms(synonym_file)
-    logger.info("Retrieving data from db")
     documents = [d for d in make_solr_documents(pid_list, work_to_holdings_map, popularity_map, synonyms, limit)]
 
     indexer = ThreadedSolrIndexer(solr_url, num_threads=10, batch_size=batch_size)
