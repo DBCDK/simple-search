@@ -9,6 +9,7 @@ import numpy as np
 import os
 import requests
 from tqdm import tqdm
+from search_relevance_eval.seca_2019 import get_all_query_and_rating_dataframes_from_url
 from search_relevance_eval.seca_2019 import get_all_query_and_rating_dataframes_from_file
 import search_relevance_eval.tools as tools
 import search_relevance_eval.metrics as metrics
@@ -18,20 +19,24 @@ import matplotlib.pyplot as plt
 def setup_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="url for the search service to evaluate")
-    parser.add_argument("data_path", metavar="data-path",
+    parser.add_argument("--data-path",
         help="path for the directory containing evaluation data")
     parser.add_argument("output_dir", metavar="output-dir",
         help="directory to write resulting images to")
     return parser.parse_args()
 
-def perform_search(data_path, query_fun):
+def perform_search(query_fun, data_path=None):
     """ Perform searches for all queries in testset """
     print("Q", query_fun)
     results = []
     test_dfs = []
 
     performed_queries = set()
-    for query, ground_truth_df in tqdm(get_all_query_and_rating_dataframes_from_file(f'{data_path}/master.csv')):
+    data_generator = get_all_query_and_rating_dataframes_from_url()
+    if data_path is not None:
+        data_generator = get_all_query_and_rating_dataframes_from_file(
+            f"{data_path}/master.csv")
+    for query, ground_truth_df in tqdm(get_all_query_and_rating_dataframes_from_url()):
         if not isinstance(query, str):
             print(f"Ignoring invalid query {query}")
             continue
@@ -115,7 +120,8 @@ def plot_result_stats(results, title):
 def main():
     args = setup_args()
     os.makedirs(args.output_dir, exist_ok=True)
-    search_results, search_test_dfs = perform_search(args.data_path, lambda q: simple_search(args.url, q, 15))
+    search_results, search_test_dfs = perform_search(lambda q: simple_search(args.url, q, 15),
+        data_path=args.data_path)
     search_ratings = get_ratings(search_test_dfs)
 
     img_save_args = {"width": 10, "height": 7.5, "dpi": 175}
@@ -125,8 +131,8 @@ def main():
 
     open_search = search_relevance_eval.opensearch_query.OpenSearch(
         "http://opensearch-5-2-ai-service.cisterne.svc.cloud.dbc.dk/b3.5_5.2/")
-    open_search_cisterne_results, open_search_cisterne_test_dfs = perform_search(args.data_path,
-        lambda q: [p for p in open_search(q)])
+    open_search_cisterne_results, open_search_cisterne_test_dfs = perform_search(
+        lambda q: [p for p in open_search(q)], data_path=args.data_path)
     open_search_cisterne_ratings = get_ratings(open_search_cisterne_test_dfs)
     plot_open_search_results = plot_result_stats(open_search_cisterne_results,
         "Open Search")
