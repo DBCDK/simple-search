@@ -77,8 +77,8 @@ def show_subset(ratings, results, n=15, cmap=plt.cm.Greens, size=20):
     ax.matshow(ratings[:,:n].T, cmap=cmap)
 
     for i in range(n):
-        for j in range(ratings.shape[0]):
-            c = ratings[j,i]
+        for j in range(ratings[:,:n].T.shape[0]):
+            c = ratings.T[j,i]
             ax.text(i, j, str(c), va='center', ha='center')
 
     plt.yticks(range(n), results['query'][:n], rotation="horizontal")
