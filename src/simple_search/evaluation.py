@@ -74,10 +74,10 @@ def show_subset(ratings, results, n=15, cmap=plt.cm.Greens, size=20):
     """ Figure of the first n searches """
     plt.rcParams['figure.figsize'] = [size, size]
     fig, ax = plt.subplots()
-    ax.matshow(ratings[:,:n].T, cmap=cmap)
+    ax.matshow(ratings.T[:n], cmap=cmap, vmin=-1)
 
     for i in range(n):
-        for j in range(ratings[:,:n].T.shape[0]):
+        for j in range(ratings.T[:n].shape[0]):
             c = ratings.T[j,i]
             ax.text(i, j, str(c), va='center', ha='center')
 
@@ -87,7 +87,7 @@ def show_all(ratings, results, cmap=plt.cm.Greens, size=20):
     """ Figure of all searches """
     plt.rcParams['figure.figsize'] = [size, size]
     fig, ax = plt.subplots()
-    ax.matshow(ratings.T, cmap=cmap)
+    ax.matshow(ratings.T, cmap=cmap, vmin=-1)
     plt.yticks(range(len(results)), results['query'], rotation="horizontal")
 
 def simple_search(url, query, rows=10):
