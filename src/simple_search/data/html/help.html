@@ -6,11 +6,13 @@
 
     <h3>Search Engine</h3>
 
-    <p>The search engine is exposed as a <b>get</b> and <b>post</b> method. It has two parameters:</p>
+    <p>The search engine is exposed as a <b>post</b> method. It has the following parameters:</p>
 
 <ul>
 <li><b>q</b>: query to base search on</li>
 <li><b>debug</b>: if true debug information is present in response</li>
+<li><b>start</b>: search result to start from, useful for pagination</li>
+<li><b>rows</b>: number of search result to return</li>
 </ul>
 <p>The result consist of a list of ranked results of works, where each item contains data for that particular work.
 </p>
@@ -18,11 +20,6 @@
 <p>example of using post:
 <code>
     curl -P -v -H "Content-Type: Application/json" -d '{"q": "hest", "debug": true}' "https://randers-simple-search.dbc.dk/search"
-</code></p>
-
-<p>example of using get:
-<code>
-    https://randers-simple-search.dbc.dk/search?q=hest&debug=true
 </code></p>
 
 example of work item:
@@ -61,7 +58,7 @@ example of work item:
     <h3>Search GUI</h3>
 
 <p>The also provides a simple GUI for exploratory work. Each hit has a cover (if any) and links to <a hraf="https://bibliotek.dk/">bibliotek.dk</a>
-    The GUI can be found at <a href="https://randers-simple-search.dbc.dk/">https://randers-simple-search.dbc.dk/</a></p>
+    The GUI can be found at <a href="http://simple-search-bibdk-1-0.mi-prod.svc.cloud.dbc.dk/">http://simple-search-bibdk-1-0.mi-prod.svc.cloud.dbc.dk/</a></p>
 
   </body>
 </html>

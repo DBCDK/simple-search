@@ -1,0 +1,37 @@
+#!groovy
+
+def workerNode = "xp-build-i01"
+
+pipeline {
+	agent {
+		docker {
+			label workerNode
+			image "docker.dbc.dk/build-env"
+			alwaysPull true
+		}
+	}
+	triggers {
+		cron("H 4 * * *")
+	}
+	stages {
+		stage("benchmark") {
+			when {
+				branch "master"
+			}
+			steps {
+				sh """#!/usr/bin/env bash
+					set -xe
+					rm -rf env history.json
+					curl -LO https://is.dbc.dk/job/ai/job/simple-search/job/simple-search-benchmark/job/master/lastSuccessfulBuild/artifact/history.json
+					python3 -m venv env
+					source env/bin/activate
+					pip install dbc-pyutils dbc-pytools
+					bench http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk/search benchmark-test/request-examples/simple-search-requests-1000.json -o history.json -q -r 1000 -m get > bench.txt
+					plot-bench history.json "Simple-search Performance"
+				"""
+				archiveArtifacts artifacts: "*.txt,history.json,performance-graph.png",
+					fingerprint: true
+			}
+		}
+	}
+}

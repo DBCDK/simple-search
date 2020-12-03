@@ -8,7 +8,7 @@ setup(name="simple-search",
     packages=["simple_search", "simple_search.solr"],
     description="",
     provides=["simple_search"],
-    install_requires=["booklens", "dbc-pyutils", "joblib", "mobus", "numpy", "pandas", "tornado", "tqdm"],
+    install_requires=["booklens", "dbc-pyutils", "joblib", "mobus", "numpy", "pandas", "tornado", "tqdm", "plotnine", "rrflow"],
     include_package_data=True,
     entry_points=
         {"console_scripts": [

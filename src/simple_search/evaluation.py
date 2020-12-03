@@ -4,10 +4,12 @@ import json
 
 import argparse
 import pandas as pd
+import plotnine as p9
 import numpy as np
 import os
 import requests
 from tqdm import tqdm
+from search_relevance_eval.seca_2019 import get_all_query_and_rating_dataframes_from_url
 from search_relevance_eval.seca_2019 import get_all_query_and_rating_dataframes_from_file
 import search_relevance_eval.tools as tools
 import search_relevance_eval.metrics as metrics
@@ -17,19 +19,32 @@ import matplotlib.pyplot as plt
 def setup_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="url for the search service to evaluate")
-    parser.add_argument("data_path", metavar="data-path",
+    parser.add_argument("--data-path",
         help="path for the directory containing evaluation data")
     parser.add_argument("output_dir", metavar="output-dir",
         help="directory to write resulting images to")
     return parser.parse_args()
 
-def perform_search(data_path, query_fun):
+def perform_search(query_fun, data_path=None):
     """ Perform searches for all queries in testset """
     print("Q", query_fun)
     results = []
     test_dfs = []
 
-    for query, ground_truth_df in tqdm(get_all_query_and_rating_dataframes_from_file(f'{data_path}/master.csv')):
+    performed_queries = set()
+    data_generator = get_all_query_and_rating_dataframes_from_url()
+    if data_path is not None:
+        data_generator = get_all_query_and_rating_dataframes_from_file(
+            f"{data_path}/master.csv")
+    for query, ground_truth_df in tqdm(get_all_query_and_rating_dataframes_from_url()):
+        if not isinstance(query, str):
+            print(f"Ignoring invalid query {query}")
+            continue
+        query = query.lower()
+        if query in performed_queries:
+            continue
+        performed_queries.add(query)
+
         search_result = query_fun(query)
         pid2work = tools.pid2work(set(search_result + ground_truth_df.pid.tolist()))
         search_result = [pid2work[p] for p in search_result]
@@ -60,53 +75,83 @@ def get_ratings(test_dfs, p_len=15):
     ratings_ = ratings_.T
     return ratings_
 
-def show_subset(ratings, results, n=15, cmap=plt.cm.Greens):
+def show_subset(ratings, results, n=15, cmap=plt.cm.Greens, size=20):
     """ Figure of the first n searches """
-    plt.rcParams['figure.figsize'] = [20, 20]
+    plt.rcParams['figure.figsize'] = [size, size]
     fig, ax = plt.subplots()
-    ax.matshow(ratings[:,:n], cmap=cmap)
+    ax.matshow(ratings.T[:n], cmap=cmap, vmin=-1)
 
     for i in range(n):
-        for j in range(ratings.shape[0]):
-            c = ratings[j,i]
+        for j in range(ratings.T[:n].shape[0]):
+            c = ratings.T[j,i]
             ax.text(i, j, str(c), va='center', ha='center')
 
-    plt.xticks(range(n), results['query'][:n], rotation='vertical')
+    plt.yticks(range(n), results['query'][:n], rotation="horizontal")
 
-def show_all(ratings, results, cmap=plt.cm.Greens):
+def show_all(ratings, results, cmap=plt.cm.Greens, size=20):
     """ Figure of all searches """
-    plt.rcParams['figure.figsize'] = [20, 20]
+    plt.rcParams['figure.figsize'] = [size, size]
     fig, ax = plt.subplots()
-    ax.matshow(ratings, cmap=cmap)
-    plt.xticks(range(len(results)), results['query'], rotation='vertical')
+    ax.matshow(ratings.T, cmap=cmap, vmin=-1)
+    plt.yticks(range(len(results)), results['query'], rotation="horizontal")
 
-def simple_search(url, query):
-    r = requests.post(url, data=json.dumps({"q": query}))
+def simple_search(url, query, rows=10):
+    r = requests.post(url, data=json.dumps({"q": query, "rows": rows}))
     r.raise_for_status()
     resp = r.json()
     pids = [d["pids"][0] for d in resp["result"]]
     return pids
 
+def plot_result_stats(results, title):
+    stats = results.describe().unstack().reset_index().rename(
+        columns={"level_0": "metric", "level_1": "group", 0: "value"})
+    stats = stats[~stats["group"].isin(["count", "min", "max"])]
+    stats["value_presentation"] = round(stats["value"], 2)
+    plot = (p9.ggplot(stats) +
+        p9.aes("metric", "value", fill="group") +
+        p9.geom_col(position="dodge") +
+        p9.theme_bw() +
+        p9.coord_cartesian(ylim=[0, 1.0]) +
+        p9.ggtitle(title) +
+        p9.geom_text(p9.aes(label="value_presentation"),
+        position=p9.position_dodge(width=0.9), va="bottom")
+    )
+    return plot
+
 def main():
     args = setup_args()
     os.makedirs(args.output_dir, exist_ok=True)
-    search_results, search_test_dfs = perform_search(args.data_path, lambda q: simple_search(args.url, q))
+    search_results, search_test_dfs = perform_search(lambda q: simple_search(args.url, q, 15),
+        data_path=args.data_path)
     search_ratings = get_ratings(search_test_dfs)
+
+    img_save_args = {"width": 10, "height": 7.5, "dpi": 175}
+    plot_simple_search_results = plot_result_stats(search_results, "Simple search")
+    plot_simple_search_results.save(os.path.join(args.output_dir,
+        "simple-search-result-stats.png"), **img_save_args)
 
     open_search = search_relevance_eval.opensearch_query.OpenSearch(
         "http://opensearch-5-2-ai-service.cisterne.svc.cloud.dbc.dk/b3.5_5.2/")
-    open_search_cisterne_results, open_search_cisterne_test_dfs = perform_search(args.data_path,
-        lambda q: [p for p in open_search(q)])
+    open_search_cisterne_results, open_search_cisterne_test_dfs = perform_search(
+        lambda q: [p for p in open_search(q)], data_path=args.data_path)
     open_search_cisterne_ratings = get_ratings(open_search_cisterne_test_dfs)
+    plot_open_search_results = plot_result_stats(open_search_cisterne_results,
+        "Open Search")
+    plot_open_search_results.save(os.path.join(args.output_dir,
+        "open-search-result-stats.png"), **img_save_args)
 
-    show_subset(search_ratings, search_results)
-    plt.savefig(os.path.join(args.output_dir, "subset.png"))
+    save_fig = lambda name: plt.savefig(os.path.join(args.output_dir, name), bbox_inches="tight")
 
-    show_all(search_ratings, search_results)
-    plt.savefig(os.path.join(args.output_dir, "all.png"))
+    show_subset(search_ratings, search_results, size=10)
+    save_fig("subset.png")
 
-    show_subset(open_search_cisterne_ratings, open_search_cisterne_results)
-    plt.savefig(os.path.join(args.output_dir, "opensearch-subset.png"))
+    show_all(search_ratings, search_results, size=10)
+    save_fig("all.png")
 
-    show_all(open_search_cisterne_ratings, open_search_cisterne_results)
-    plt.savefig(os.path.join(args.output_dir, "opensearch-all.png"))
+    show_subset(open_search_cisterne_ratings, open_search_cisterne_results, size=10)
+    save_fig("opensearch-subset.png")
+
+    show_all(open_search_cisterne_ratings, open_search_cisterne_results, size=10)
+    save_fig("opensearch-all.png")
+
+    print(f"Simple search:\n{search_results.describe()}\nOpen Search:\n{open_search_cisterne_results.describe()}")
