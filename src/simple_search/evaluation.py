@@ -25,18 +25,16 @@ def setup_args() -> argparse.Namespace:
         help="directory to write resulting images to")
     return parser.parse_args()
 
-def perform_search(query_fun, data_path=None):
+def perform_search(query_fun, queries_and_dataframes):
     """ Perform searches for all queries in testset """
     print("Q", query_fun)
     results = []
     test_dfs = []
 
     performed_queries = set()
-    data_generator = get_all_query_and_rating_dataframes_from_url()
-    if data_path is not None:
-        data_generator = get_all_query_and_rating_dataframes_from_file(
-            f"{data_path}/master.csv")
-    for query, ground_truth_df in tqdm(get_all_query_and_rating_dataframes_from_url()):
+    for query, ground_truth_df in queries_and_dataframes:
+        # Avoid changing the original dataframe
+        local_ground_truth_df = ground_truth_df.copy()
         if not isinstance(query, str):
             print(f"Ignoring invalid query {query}")
             continue
@@ -46,16 +44,16 @@ def perform_search(query_fun, data_path=None):
         performed_queries.add(query)
 
         search_result = query_fun(query)
-        pid2work = tools.pid2work(set(search_result + ground_truth_df.pid.tolist()))
+        pid2work = tools.pid2work(set(search_result + local_ground_truth_df.pid.tolist()))
         search_result = [pid2work[p] for p in search_result]
-        ground_truth_df.pid = ground_truth_df.pid.map(pid2work)
-        test_df = tools.combine_search_result_and_ground_truth(search_result, ground_truth_df)
-        if len(ground_truth_df) >= 5 and len(test_df) >= 5:
+        local_ground_truth_df.pid = local_ground_truth_df.pid.map(pid2work)
+        test_df = tools.combine_search_result_and_ground_truth(search_result, local_ground_truth_df)
+        if len(local_ground_truth_df) >= 5 and len(test_df) >= 5:
             result = {'query': query,
-                      'precision': metrics.precision(ground_truth_df, test_df, k=5),
-                      'recall': metrics.recall(ground_truth_df, test_df, k=5),
-                      'f-measure': metrics.f_measure(ground_truth_df, test_df, k=5),
-                      'nDCG': metrics.dcg(ground_truth_df, test_df, k=10, norm=True)}
+                      'precision': metrics.precision(local_ground_truth_df, test_df, k=5),
+                      'recall': metrics.recall(local_ground_truth_df, test_df, k=5),
+                      'f-measure': metrics.f_measure(local_ground_truth_df, test_df, k=5),
+                      'nDCG': metrics.dcg(local_ground_truth_df, test_df, k=10, norm=True)}
             results.append(result)
             test_dfs.append(test_df)
 
@@ -121,8 +119,14 @@ def plot_result_stats(results, title):
 def main():
     args = setup_args()
     os.makedirs(args.output_dir, exist_ok=True)
+    if args.data_path is not None:
+        data_generator = get_all_query_and_rating_dataframes_from_file(
+            f"{args.data_path}/master.csv")
+    else:
+        data_generator = get_all_query_and_rating_dataframes_from_url()
+    queries_and_dataframes = list(data_generator)
     search_results, search_test_dfs = perform_search(lambda q: simple_search(args.url, q, 15),
-        data_path=args.data_path)
+        queries_and_dataframes)
     search_ratings = get_ratings(search_test_dfs)
 
     img_save_args = {"width": 10, "height": 7.5, "dpi": 175}
@@ -133,7 +137,7 @@ def main():
     open_search = search_relevance_eval.opensearch_query.OpenSearch(
         "http://opensearch-5-2-ai-service.cisterne.svc.cloud.dbc.dk/b3.5_5.2/")
     open_search_cisterne_results, open_search_cisterne_test_dfs = perform_search(
-        lambda q: [p for p in open_search(q)], data_path=args.data_path)
+        lambda q: [p for p in open_search(q)], queries_and_dataframes)
     open_search_cisterne_ratings = get_ratings(open_search_cisterne_test_dfs)
     plot_open_search_results = plot_result_stats(open_search_cisterne_results,
         "Open Search")
