@@ -32,7 +32,7 @@ def perform_search(query_fun, queries_and_dataframes):
     test_dfs = []
 
     performed_queries = set()
-    for query, ground_truth_df in queries_and_dataframes:
+    for query, ground_truth_df in tqdm(queries_and_dataframes):
         # Avoid changing the original dataframe
         local_ground_truth_df = ground_truth_df.copy()
         if not isinstance(query, str):
@@ -48,16 +48,21 @@ def perform_search(query_fun, queries_and_dataframes):
         search_result = [pid2work[p] for p in search_result]
         local_ground_truth_df.pid = local_ground_truth_df.pid.map(pid2work)
         test_df = tools.combine_search_result_and_ground_truth(search_result, local_ground_truth_df)
-        if len(local_ground_truth_df) >= 5 and len(test_df) >= 5:
+        if len(local_ground_truth_df) > 0 and len(test_df) > 0:
             result = {'query': query,
                       'precision': metrics.precision(local_ground_truth_df, test_df, k=5),
                       'recall': metrics.recall(local_ground_truth_df, test_df, k=5),
                       'f-measure': metrics.f_measure(local_ground_truth_df, test_df, k=5),
                       'nDCG': metrics.dcg(local_ground_truth_df, test_df, k=10, norm=True)}
-            results.append(result)
-            test_dfs.append(test_df)
         else:
+            result = {'query': query,
+                      'precision': 0.0,
+                      'recall': 0.0,
+                      'f-measure': 0.0,
+                      'nDCG': 0.0}
             print(f"Query {query} had too few results: {len(local_ground_truth_df)} : {len(test_df)}")
+        results.append(result)
+        test_dfs.append(test_df)
 
     results = pd.DataFrame(results, columns=['query', 'precision', 'recall', 'f-measure', 'nDCG'])
     return results, test_dfs
