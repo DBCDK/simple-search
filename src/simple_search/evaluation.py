@@ -56,6 +56,8 @@ def perform_search(query_fun, queries_and_dataframes):
                       'nDCG': metrics.dcg(local_ground_truth_df, test_df, k=10, norm=True)}
             results.append(result)
             test_dfs.append(test_df)
+        else:
+            print(f"Query {query} had too few results: {len(local_ground_truth_df)} : {len(test_df)}")
 
     results = pd.DataFrame(results, columns=['query', 'precision', 'recall', 'f-measure', 'nDCG'])
     return results, test_dfs
