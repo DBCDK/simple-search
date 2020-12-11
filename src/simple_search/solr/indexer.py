@@ -10,7 +10,9 @@ indexer
 Creates document collection.
 
 """
+import grequests
 
+import json
 import argparse
 import collections
 from collections import defaultdict
@@ -30,11 +32,64 @@ from mobus import lowell_mapping_functions as lmf
 from simple_search.synonym_list import Synonyms
 import dbc_pyutils.cursor
 
-from dbc_pyutils import Time, ThreadedSolrIndexer
+from dbc_pyutils import Time
+
 logger = logging.getLogger(__name__)
 
 # Disable tqdm when building on jenkins, as it does not implement \r, and you'll get some messy output
 tqdm = partial(tqdm, ncols=150, disable=(not sys.stdout.isatty()))
+
+
+class ThreadedSolrIndexer():
+    """
+    Solr indexer.
+    Indexer with batch functionality and parallel indexing from
+    multiple threads
+    """
+    def __init__(self, url, num_threads=1, batch_size=1000):
+        """
+        Initializes indexer
+
+        :param url:
+            url of solr collection
+        :param num_threads:
+            Number of parallel indexer threads
+        :param batch_size:
+            Number of documents in each batch
+        """
+        self.url = url.rstrip('/')
+        self.num_threads = num_threads
+        self.batch_size = batch_size
+        logger.info(f'Solr indexer initialized url={self.url}, num_threads={self.num_threads}, batch_size={self.batch_size}')
+
+    def __call__(self, documents):
+        return self.index(documents)
+
+    def index(self, documents):
+        """
+        indexes docs into solr
+
+        :param docs:
+            list of docs to index
+        """
+        doc_chunks = (chunk for chunk in self.__chunks(documents, self.batch_size))
+        rs = (grequests.post(self.url + '/update', data=json.dumps(docs), headers={'Content-Type': 'application/json'})
+              for docs in doc_chunks)
+        responses = grequests.map(rs, size=self.num_threads)
+        for response in responses:
+            if not response.ok:
+                response.raise_for_status()
+
+    def commit(self):
+        """ commits changed to solr collection """
+        resp = requests.get(self.url + '/update', params={'commit': 'true'})
+        if not resp.ok:
+            resp.raise_for_status()
+
+    def __chunks(self, l, n):
+        for i in range(0, len(l), n):
+            yield l[i: i+n]
+
 
 
 def map_work_to_metadata(docs, pid2work):
