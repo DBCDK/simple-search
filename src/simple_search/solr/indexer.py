@@ -10,6 +10,7 @@ indexer
 Creates document collection.
 
 """
+import requests
 import grequests
 
 import json
