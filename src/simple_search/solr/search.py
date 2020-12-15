@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 from dataclasses import dataclass
+from collections import namedtuple
 import dbc_pyutils.solr
 from simple_search.smartsearch import SmartSearch, CuratedSearch
 import logging
 
 logger = logging.getLogger(__name__)
 
+
+SmartSearchData = namedtuple('SmartSearch', 'query bf')
 
 @dataclass
 class Option:
@@ -43,6 +46,15 @@ def parse_options(options_dict):
 logger = logging.getLogger(__name__)
 
 
+def create_bf(workids):    
+    bval = 1000
+    bf = '1'
+    for w in workids[::-1]:
+        bval += 1000
+        bf = f'if(termfreq(workid,"{w}"),{bval},{bf})'
+    return bf
+
+
 class Searcher(object):
     def __init__(self, solr_url, smartsearch_model_file=None, curated_search_file=None):
         self.solr = dbc_pyutils.solr.Solr(solr_url)
@@ -57,17 +69,17 @@ class Searcher(object):
 
     def search(self, phrase, debug=False, *, options: dict = {}, rows=10, start=0):
         logger.info(f'Searching for {phrase}')
-
-    def search(self, phrase, debug=False, *, options:dict={}, rows=10, start=0):
-        logger.info(f'Searching for {phrase}')
         query = phrase.strip()
         options = parse_options(options)
         logger.info(f"search options {options}")
 
-        smartsearch_docs = []
+        smartsearch = None
         if options.smartsearch:
-            smartsearch_docs = self.smartsearch.search(query, options.smartsearch)
-
+            smartsearch_workids = self.smartsearch.get(query, options.smartsearch)
+            logger.warning(f'smartsearch {smartsearch_workids}')
+            if smartsearch_workids:
+                smartsearch = SmartSearchData("(" + " OR ".join([f'workid:"{w}"' for w in smartsearch_workids]) + ") OR ",
+                                              create_bf(smartsearch_workids))
         params = {
             "defType": "edismax",
             "qf": f"creator_exact title_exact creator_and_title creator creator_sort title series contributor subject_dbc subject_synonyms {options.phonetic_creator_contributor}",
@@ -84,34 +96,31 @@ class Searcher(object):
             "rows": rows,
             "start": start,
         }
+
+        if smartsearch:
+            params['bf'] = smartsearch.bf
+
         debug_fields = ["title_alternative", "creator", "workid", "contributor", "work_type"]
         include_fields = ["pids", "title", "language"]
 
         if options.curated_search:
-            retain = {'defType': params['defType'], 'fl': params['fl'], 'sort': params['sort'], 'rows': params['rows'], 'rows': params['rows']}
+            retain = {'defType': params['defType'], 'fl': params['fl'], 'sort': params['sort'], 'start': params['start'], 'rows': params['rows']}
+            if 'bf' in params:
+                retain['bf'] = params['bf']
             query, params = self.curated_search(query)
+
             params.update(retain)
 
-        def doc_iter():
-            for doc in smartsearch_docs:
-                yield doc
-
-            for doc in self.solr.search(query, **params):
-                yield doc
-
-        workids = set()
-        for doc in doc_iter():
-
-            if doc['workid'] in workids:
-                continue
-            workids.add(doc['workid'])
+        if smartsearch:
+            query = smartsearch.query + query
+        logger.error(f'QUERY {query}')
+        for doc in self.solr.search(query, **params):
             result_doc = {f: doc[f] for f in include_fields if f in doc}
             result_doc["pid_details"] = parse_pid_to_type_map(doc["pid_to_type_map"])
             if debug:
                 debug_object = {f: doc[f] for f in debug_fields if f in doc}
                 result_doc["debug"] = debug_object
             yield result_doc
-
 
 
 def parse_pid_to_type_map(content):

@@ -85,19 +85,20 @@ class SmartSearch:
             return cls(data, solr)
 
     def get(self, query, max_n=3):
-        return self.data.get(query, [])[:3]
+        data = self.data.get(query, [])[:max_n]
+        return [w for w, _ in data]
 
-    def search(self, query, max_n=3):
-        with Time('smartsearch result took ', level='info'):
-            result = self.get(query, max_n)
-            if not result:
-                return []
-            query = ' OR '.join([f'workid:"{w}"' for w, _ in result])
-            params = {
-                      'fl': "pids,title,creator,contributor,workid,work_type,language,pid_to_type_map",
-                      'rows': max_n}
-            docs = [doc for doc in self.solr.search(query, **params)]
-            return docs
+    # def search(self, query, max_n=3):
+    #     with Time('smartsearch result took ', level='info'):
+    #         result = self.get(query, max_n)
+    #         if not result:
+    #             return []
+    #         query = ' OR '.join([f'workid:"{w}"' for w, _ in result])
+    #         params = {
+    #                   'fl': "pids,title,creator,contributor,workid,work_type,language,pid_to_type_map",
+    #                   'rows': max_n}
+    #         docs = [doc for doc in self.solr.search(query, **params)]
+    #         return docs
 
 
 class CuratedSearch:
