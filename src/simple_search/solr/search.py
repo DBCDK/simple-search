@@ -46,7 +46,8 @@ def parse_options(options_dict):
 logger = logging.getLogger(__name__)
 
 
-def create_bf(workids):    
+def create_bf(workids):
+    """ Thew constructed bf string will boost the smartsearch results to the top """
     bval = 1000
     bf = '1'
     for w in workids[::-1]:
