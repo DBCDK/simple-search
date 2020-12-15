@@ -23,9 +23,11 @@ STATS = {"search": Statistics(name="search")}
 
 logger = rrflow.utils.setup_logging()
 
+
 def setup_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("solr_url", metavar="solr-url")
+    parser.add_argument("--smart-search", dest="smart_search", help="file with smartsearch model content")
     parser.add_argument("-p", "--port", default=5000)
     return parser.parse_args()
 
@@ -54,8 +56,8 @@ class ConfigHandler(BaseHandler):
             config = json.load(f)
             queries = [query['q'] for query in config['queries']]
         self.write(json.dumps({'queries': queries}))
-        
-        
+
+
 class SearchHandler(BaseHandler):
     def initialize(self, searcher):
         self.searcher = searcher
@@ -83,7 +85,7 @@ class SearchHandler(BaseHandler):
 class DefaultHandler(BaseHandler):
     def get(self):
         with open(resource_filename("simple_search",
-                "data/cfg/search_results_tester_config.json")) as fp:
+                                    "data/cfg/search_results_tester_config.json")) as fp:
             config = json.load(fp)
             queries = [query["q"] for query in config["queries"]]
         path = resource_filename("simple_search", "data/html/index.html")
@@ -98,7 +100,7 @@ class APIHandler(BaseHandler):
 def main():
     args = setup_args()
     info = build_info.get_info("simple_search")
-    searcher = Searcher(args.solr_url)
+    searcher = Searcher(args.solr_url, args.smart_search)
     tornado_app = tornado.web.Application([
         ("/", DefaultHandler),
         ("/config", ConfigHandler),
