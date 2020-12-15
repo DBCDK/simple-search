@@ -12,6 +12,7 @@
 			let options = {
 				"include-phonetic-creator": $("#include-phonetic-creator").is(":checked"),
 				"include-smartsearch": $("#include-smartsearch").is(":checked"),
+				"include-curatedsearch": $("#include-curatedsearch").is(":checked"),
 			};
 			let data = {"q": query, "debug": true, "options": options};
 			data = JSON.stringify(data);
@@ -111,6 +112,10 @@
 		<div>
 			<input type="checkbox" id="include-smartsearch">
 			<label for="include-smartsearch">Smartsearch</label>
+		</div>
+		<div>
+			<input type="checkbox" id="include-curatedsearch">
+			<label for="include-curatedsearch">Curated search (only works for film/nye film at the moment)</label>
 		</div>
 		<div id="results" class="block">
 		</div>
