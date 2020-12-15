@@ -11,6 +11,7 @@
 		function send_query(query) {
 			let options = {
 				"include-phonetic-creator": $("#include-phonetic-creator").is(":checked"),
+				"include-smartsearch": $("#include-smartsearch").is(":checked"),
 			};
 			let data = {"q": query, "debug": true, "options": options};
 			data = JSON.stringify(data);
@@ -106,6 +107,10 @@
 		<div>
 			<input type="checkbox" id="include-phonetic-creator">
 			<label for="include-phonetic-creator">Inkluder fonetiske creator- og contributor-navne</label>
+		</div>
+		<div>
+			<input type="checkbox" id="include-smartsearch">
+			<label for="include-smartsearch">Smartsearch</label>
 		</div>
 		<div id="results" class="block">
 		</div>
