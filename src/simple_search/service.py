@@ -28,6 +28,7 @@ def setup_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("solr_url", metavar="solr-url")
     parser.add_argument("--smart-search", dest="smart_search", help="file with smartsearch model content")
+    parser.add_argument("--curated-search", dest="curated_search", help="file with curated search content")
     parser.add_argument("-p", "--port", default=5000)
     return parser.parse_args()
 
@@ -91,6 +92,7 @@ class DefaultHandler(BaseHandler):
         path = resource_filename("simple_search", "data/html/index.html")
         self.render(path, queries=queries)
 
+
 class APIHandler(BaseHandler):
     def get(self):
         path = resource_filename('simple_search', 'data/html/help.html')
@@ -100,7 +102,7 @@ class APIHandler(BaseHandler):
 def main():
     args = setup_args()
     info = build_info.get_info("simple_search")
-    searcher = Searcher(args.solr_url, args.smart_search)
+    searcher = Searcher(args.solr_url, args.smart_search, args.curated_search)
     tornado_app = tornado.web.Application([
         ("/", DefaultHandler),
         ("/config", ConfigHandler),

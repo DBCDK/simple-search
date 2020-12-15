@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from dataclasses import dataclass
 import dbc_pyutils.solr
-from simple_search.smartsearch_model import SmartSearch
+from simple_search.smartsearch import SmartSearch, CuratedSearch
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 class Option:
     phonetic_creator_contributor: str = ''
     smartsearch: int = 0
+    curated_search: bool = False
+    def __str__(self):
+        return f"<Options - phonetic_creator_contributor='{self.phonetic_creator_contributor}', smartsearch={self.smartsearch}, curated_search={self.curated_search}>"
 
 
 def parse_options(options_dict):
@@ -25,27 +28,38 @@ def parse_options(options_dict):
         phonetic_creator_contributor = "creator_phonetic^10 contributor_phonetic"
 
     smartsearch = 0
-    if set_in_options("smart-search"):
+    if set_in_options("include-smartsearch"):
         smartsearch = 3
 
+    curated_search = False
+    if set_in_options("include-curatedsearch"):
+        curated_search = True
+
     return Option(phonetic_creator_contributor=phonetic_creator_contributor,
-                  smartsearch=smartsearch)
+                  smartsearch=smartsearch,
+                  curated_search=curated_search)
 
 
 class Searcher(object):
-    def __init__(self, solr_url, smartsearch_model_file):
+    def __init__(self, solr_url, smartsearch_model_file=None, curated_search_file=None):
         self.solr = dbc_pyutils.solr.Solr(solr_url)
         self.smartsearch = None
         if smartsearch_model_file:
             logger.info('Searcher initialized with smartsearch')
             self.smartsearch = SmartSearch.load(smartsearch_model_file, self.solr)
+        self.curated_search = CuratedSearch({})
+        if curated_search_file:
+            logger.info('Searcher initialized with curated search')
+            self.curated_search = CuratedSearch.load(curated_search_file)
 
     def search(self, phrase, debug=False, *, options: dict = {}, rows=10, start=0):
+        logger.info(f'Searching for {phrase}')
+
         query = phrase.strip()
-
-        options['smart-search'] = 3  # HARDCODED value - max number of smartsearch results
         options = parse_options(options)
+        logger.info(f"search options {options}")
 
+        smartsearch_docs = []
         if options.smartsearch:
             smartsearch_docs = self.smartsearch.search(query, options.smartsearch)
 
@@ -68,14 +82,21 @@ class Searcher(object):
         debug_fields = ["title_alternative", "creator", "workid", "contributor", "work_type"]
         include_fields = ["pids", "title", "language"]
 
+        if options.curated_search:
+            retain = {'defType': params['defType'], 'fl': params['fl'], 'sort': params['sort'], 'rows': params['rows'], 'rows': params['rows']}
+            query, params = self.curated_search(query)
+            params.update(retain)
+
         def doc_iter():
             for doc in smartsearch_docs:
                 yield doc
+
             for doc in self.solr.search(query, **params):
                 yield doc
 
         workids = set()
         for doc in doc_iter():
+
             if doc['workid'] in workids:
                 continue
             workids.add(doc['workid'])
