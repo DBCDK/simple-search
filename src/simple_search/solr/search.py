@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-
+import logging
 import dbc_pyutils.solr
+
+logger = logging.getLogger(__name__)
+
 
 class Searcher(object):
     def __init__(self, solr_url):
         self.solr = dbc_pyutils.solr.Solr(solr_url)
 
     def search(self, phrase, debug=False, *, options:dict={}, rows=10, start=0):
+        logger.info(f'Searching for {phrase}')
         query = phrase.strip()
         phonetic_creator_contributor = ""
         if "include-phonetic-creator" in options and options["include-phonetic-creator"]:
