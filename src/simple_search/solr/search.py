@@ -40,6 +40,9 @@ def parse_options(options_dict):
                   curated_search=curated_search)
 
 
+logger = logging.getLogger(__name__)
+
+
 class Searcher(object):
     def __init__(self, solr_url, smartsearch_model_file=None, curated_search_file=None):
         self.solr = dbc_pyutils.solr.Solr(solr_url)
@@ -55,6 +58,8 @@ class Searcher(object):
     def search(self, phrase, debug=False, *, options: dict = {}, rows=10, start=0):
         logger.info(f'Searching for {phrase}')
 
+    def search(self, phrase, debug=False, *, options:dict={}, rows=10, start=0):
+        logger.info(f'Searching for {phrase}')
         query = phrase.strip()
         options = parse_options(options)
         logger.info(f"search options {options}")
