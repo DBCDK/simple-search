@@ -13,13 +13,21 @@
 <li><b>debug</b>: if true debug information is present in response</li>
 <li><b>start</b>: search result to start from, useful for pagination</li>
 <li><b>rows</b>: number of search result to return</li>
+<li><b>options</b>: object with advanced options. Available options are:
+  <ul>
+    <li><b>include-smartsearch</b>: Fills the firsts three hits based on clickdata from Randers bib</li>
+    <li><b>include-curatedsearch</b>: Rewrites specific search for better results</li>
+    <li><b>include-phonetic-creator</b>: Expand searching to usse phonetic creator fields</li>
+    </ul>
+
+</li>
 </ul>
 <p>The result consist of a list of ranked results of works, where each item contains data for that particular work.
 </p>
 
 <p>example of using post:
 <code>
-    curl -P -v -H "Content-Type: Application/json" -d '{"q": "hest", "debug": true}' "https://randers-simple-search.dbc.dk/search"
+    curl -P -v -H "Content-Type: Application/json" -d '{"q": "hest", "debug": true, "options": {"include-smartsearch": true}}' "https://randers-simple-search.dbc.dk/search"
 </code></p>
 
 example of work item:
