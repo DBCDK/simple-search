@@ -77,7 +77,6 @@ class Searcher(object):
         smartsearch = None
         if options.smartsearch:
             smartsearch_workids = self.smartsearch.get(query, options.smartsearch)
-            logger.warning(f'smartsearch {smartsearch_workids}')
             if smartsearch_workids:
                 smartsearch = SmartSearchData("(" + " OR ".join([f'workid:"{w}"' for w in smartsearch_workids]) + ") OR ",
                                               create_bf(smartsearch_workids))
@@ -114,7 +113,6 @@ class Searcher(object):
 
         if smartsearch:
             query = smartsearch.query + query
-        logger.error(f'QUERY {query}')
         for doc in self.solr.search(query, **params):
             result_doc = {f: doc[f] for f in include_fields if f in doc}
             result_doc["pid_details"] = parse_pid_to_type_map(doc["pid_to_type_map"])
