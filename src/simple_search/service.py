@@ -23,6 +23,7 @@ STATS = {"search": Statistics(name="search")}
 
 logger = rrflow.utils.setup_logging()
 
+AUTHKEYMAP = json.loads(os.environ["AUTHKEYMAP"])
 
 def setup_args():
     parser = argparse.ArgumentParser()
@@ -65,6 +66,16 @@ class SearchHandler(BaseHandler):
 
     def post(self):
         body = json.loads(self.request.body.decode("utf8"))
+        if "access-token" not in body:
+            #self.set_status(401)
+            #return self.write("No access-token provided")
+            logger.info(f"No access-token provided")
+        else:
+            access_token = body["access-token"]
+            if access_token not in AUTHKEYMAP.values():
+                #self.set_status(401)
+                #return self.write(f"Unauthorized access token {access_token}")
+                logger.info(f"Unauthorized access token {access_token}")
         query = body["q"]
         debug = body.get("debug", False)
         start = body.get("start", 0)
