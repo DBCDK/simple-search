@@ -101,7 +101,7 @@ def show_all(ratings, results, cmap=plt.cm.Greens, size=20):
     plt.yticks(range(len(results)), results['query'], rotation="horizontal")
 
 def simple_search(url, query, rows=10):
-    r = requests.post(url, data=json.dumps({"q": query, "rows": rows}))
+    r = requests.post(url, data=json.dumps({"q": query, "rows": rows, "options": {"include-smartsearch": True}}))
     r.raise_for_status()
     resp = r.json()
     pids = [d["pids"][0] for d in resp["result"]]
