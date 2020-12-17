@@ -31,6 +31,11 @@
     curl -P -v -H "Content-Type: Application/json" -d '{"q": "hest", "debug": true, "options": {"include-smartsearch": true}}' "https://randers-simple-search.dbc.dk/search"
 </code></p>
 
+<p>example of using post with access-token:
+<code>
+    curl -P -v -H "Content-Type: Application/json" -d '{"q": "hest", "debug": true, "options": {"include-smartsearch": true} "access-token": "TOKEN"}' "https://randers-simple-search.dbc.dk/search"
+</code></p>
+
 example of work item:
 <pre><code>
     {
