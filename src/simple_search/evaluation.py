@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import json
-
+import joblib
 import argparse
 import pandas as pd
 import plotnine as p9
@@ -153,6 +153,11 @@ def main():
 
     save_fig = lambda name: plt.savefig(os.path.join(args.output_dir, name), bbox_inches="tight")
 
+    joblib.dump(search_ratings, 'simple_search_rating.pkl')
+    joblib.dump(search_results, 'simple_search_results.pkl')
+    joblib.dump(open_search_cisterne_ratings, 'open_search_rating.pkl')
+    joblib.dump(open_search_cisterne_results, 'open_search_results.pkl')
+    
     show_subset(search_ratings, search_results, size=10)
     save_fig("subset.png")
 

@@ -32,7 +32,7 @@ pipeline {
 					pip install .
 					evaluate-search http://simple-search-evaluation-1-0.mi-prod.svc.cloud.dbc.dk/search output
 				"""
-				archiveArtifacts artifacts: "output/*.png,src/simple_search/data/html/evaluation.html"
+				archiveArtifacts artifacts: "output/*.png,src/simple_search/data/html/evaluation.html,*.pkl"
 			}
 		}
 	}
