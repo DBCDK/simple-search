@@ -10,13 +10,16 @@ logger = logging.getLogger(__name__)
 
 SmartSearchData = namedtuple('SmartSearch', 'query bf')
 
+
 @dataclass
 class Option:
     phonetic_creator_contributor: str = ''
     smartsearch: int = 0
     curated_search: bool = False
+    synonyms: bool = True
+
     def __str__(self):
-        return f"<Options - phonetic_creator_contributor='{self.phonetic_creator_contributor}', smartsearch={self.smartsearch}, curated_search={self.curated_search}>"
+        return f"<Options - phonetic_creator_contributor='{self.phonetic_creator_contributor}', smartsearch={self.smartsearch}, curated_search={self.curated_search}, synonyms={self.synonyms}>"
 
 
 def parse_options(options_dict):
@@ -38,9 +41,14 @@ def parse_options(options_dict):
     if set_in_options("include-curatedsearch"):
         curated_search = True
 
+    synonyms = False
+    if set_in_options("include-synonyms"):
+        synonyms = True
+
     return Option(phonetic_creator_contributor=phonetic_creator_contributor,
                   smartsearch=smartsearch,
-                  curated_search=curated_search)
+                  curated_search=curated_search,
+                  synonyms=synonyms)
 
 
 logger = logging.getLogger(__name__)
@@ -80,6 +88,7 @@ class Searcher(object):
             if smartsearch_workids:
                 smartsearch = SmartSearchData("(" + " OR ".join([f'workid:"{w}"' for w in smartsearch_workids]) + ") OR ",
                                               create_bf(smartsearch_workids))
+
         params = {
             "defType": "edismax",
             "qf": f"creator_exact title_exact creator_and_title creator creator_sort title series contributor subject_dbc subject_synonyms {options.phonetic_creator_contributor}",
@@ -97,6 +106,10 @@ class Searcher(object):
             "start": start,
         }
 
+        if not options.synonyms:
+            params['qf'] = f"creator_exact title_exact creator_and_title creator creator_sort title series contributor subject_dbc {options.phonetic_creator_contributor}",
+            params['pf'] = "creator_exact^200 creator^100 creator_sort^100 creator_and_title^100 title_exact^100 title^100 series^75 contributor^50 subject_dbc",
+        
         if smartsearch:
             params['bf'] = smartsearch.bf
 
