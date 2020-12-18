@@ -53,7 +53,7 @@ def perform_search(query_fun, queries_and_dataframes):
                       'precision': metrics.precision(local_ground_truth_df, test_df, k=5),
                       'recall': metrics.recall(local_ground_truth_df, test_df, k=5),
                       'f-measure': metrics.f_measure(local_ground_truth_df, test_df, k=5),
-                      'nDCG': metrics.dcg(local_ground_truth_df, test_df, k=10, norm=True)}
+                      'nDCG': metrics.dcg(local_ground_truth_df, test_df, k=5, norm=True)}
         else:
             result = {'query': query,
                       'precision': 0.0,
