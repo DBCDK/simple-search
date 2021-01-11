@@ -1,3 +1,5 @@
+data
+.mypy_cache
 *.swp
 *.pyc
 __pycache__
