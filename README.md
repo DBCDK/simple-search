@@ -76,3 +76,13 @@ example of using get:
 The also provides a simple GUI for exploratory work. Each hit has a cover (if any) and links to [bibliotek.dk](https://bibliotek.dk/)
 
 The GUI can be found at [http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk](http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk)
+
+## Work-presentation data
+
+The file `sandbox.py` (at the time of writing) is a first attempt to do simple search with data from the work-presentation database. Here is an example of how to run it. I have stripped away the holdings stuff and the popularity stuff to begin with.
+
+```
+   WORK_PRESENTATION_URL=postgres://$WORK_PRESENTATION_POSTGRES_URL python src/simple_search/solr/sandbox.py ./pids-773000/773000.pids http://localhost:8983/solr/simple-search/
+```
+
+where the `773000.pids` file was found on artifactory `ai-generic/simple-search/773000.pids`.
