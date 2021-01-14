@@ -5,7 +5,7 @@ def workerNode = "xp-build-i01"
 pipeline {
 	agent { label workerNode }
 	environment {
-		LOWELL_URL = credentials("lowell_db_connection_string")
+		LOWELL_URL = credentials("ny-lowell-prod")
 	}
 	triggers {
 		cron("0 5 * * *")

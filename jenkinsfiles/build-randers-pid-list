@@ -14,7 +14,7 @@ pipeline {
 		cron("0 4 * * *")
 	}
 	environment {
-		    LOWELL_URL = credentials('lowell_db_connection_string')
+		    LOWELL_URL = credentials("ny-lowell-prod")
 		    ARTIFACTORY_LOGIN = credentials("artifactory_login")
 
 		    HOLDINGS_ARTIFACT_URL = 'https://artifactory.dbc.dk/artifactory/os-scrum-generic/holdings-items/laesekompas-holdings-items-dump.json.gz'
