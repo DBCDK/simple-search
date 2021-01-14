@@ -68,12 +68,14 @@ def map_work_to_metadata(docs, pid2work):
                 logger.debug('pids')
                 logger.debug(",".join(pid_list))
             metadata_union['pids'] = pid_list
-            if len(metadata['creators']) > 0 and 'value' in metadata['creators']:
-                c = metadata['creators'][0]['value']
+            if len(metadata['creators']) > 0:
+                contributors = []
+                for d in metadata['creators']:
+                    contributors.append(d['value'])
                 logger.debug('contributor')
-                logger.debug(c)
-                metadata_union['contributor'] = c
-                metadata_union['contributor-phonetic'] = c
+                logger.debug(contributors)
+                metadata_union['contributor'] = contributors
+                metadata_union['contributor-phonetic'] = contributors
             if 'subjects' in metadata:
                 subjects = metadata['subjects']
                 subject_dk5 = next((x for x in subjects if x['type'] == 'DK5'), None)
@@ -102,7 +104,7 @@ def get_documents(sql, *args):
 
 def pid2pwork(pids) -> dict:
     """ Creates pid2work dict by fetching all relevant works from relations table in work-presentation-db """
-    logger.debug("fetching workids for %d pids", len(pids))
+    logger.info("fetching workids for %d pids", len(pids))
     pids_tuple = tuple(pids)
     p2w = {}
     for row in get_documents(
@@ -111,8 +113,18 @@ def pid2pwork(pids) -> dict:
         p2w[row[0]] = row[1]
     return dict(p2w)
 
+def pid2corepo_work(pids) -> dict:
+    logger.info("fetching corepo-workids for %d pids", len(pids))
+    pids_tuple = tuple(pids)
+    p2cw = {}
+    for row in get_documents(
+        "SELECT manifestationid, corepoworkid FROM workcontains WHERE manifestationid IN %s", (pids_tuple,)
+        ):
+        p2cw[row[0]] = row[1]
+    return dict(p2cw)
 
-def make_solr_documents(pid_list, limit=None):
+
+def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, limit=None):
     """
     Creates solr documents based on rows from work presentation
 
@@ -122,6 +134,7 @@ def make_solr_documents(pid_list, limit=None):
     with open(pid_list) as fp:
         pids = [f.strip() for f in fp][:limit]
     pid2work = pid2pwork(pids)
+    pid2cwork = pid2corepo_work(pids)
     logger.info("pid2work size %s", len(pid2work))
     docs = {r[0]: r[1] for r in get_documents(
         "SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid IN %s", (tuple(pids),))}
@@ -157,12 +170,13 @@ def make_solr_documents(pid_list, limit=None):
         years_since_publication = 99
 
         # Add one to holdings and popularity to avoid zeros since boosting is multiplicative
-#        holdings = math.log(int(work_to_holdings_map[work])) + 1 if work in work_to_holdings_map else 1
-        holdings = 1
+        holdings_sum = sum(int(work_to_holdings_map.get(pid2cwork.get(pid, 'hest'), 0)) for pid in pids)
+        holdings = math.log(holdings_sum) + 1 if holdings_sum > 0 else 1
+#        holdings = 1
 
-#        popularity_sum = sum(popularity_map[pid] for pid in pids if pid in popularity_map)
-#        popularity = math.log(popularity_sum) + 1 if popularity_sum > 0 else 1
-        popularity = 1
+        popularity_sum = sum(pop_map[pid] for pid in pids if pid in pop_map)
+        popularity = math.log(popularity_sum) + 1 if popularity_sum > 0 else 1
+#        popularity = 1
         document = { # "title": title,
                     "workid": work,
                     "pids": pids,
@@ -194,12 +208,12 @@ def add_keys(metadata, keys, is_list=True):
     return document
 
 
-def create_collection(solr_url, pid_list, limit=None, batch_size=1000):
+def create_collection(solr_url, pid_list, work_to_holdings_map, pop_map, limit=None, batch_size=1000):
     """
     Harvest rows from work-presentation and creates and indexes solr documents
     """
     logger.info("Retrieving data from db")
-    documents = [d for d in make_solr_documents(pid_list, limit)]
+    documents = [d for d in make_solr_documents(pid_list, work_to_holdings_map, pop_map, limit)]
     doc_chunks = [c for c in chunks(documents, batch_size)]
     logger.info(f"Created {len(doc_chunks)} document chunk (size={batch_size})")
     logger.info(f"Indexing into solr at {solr_url}")
@@ -209,11 +223,27 @@ def create_collection(solr_url, pid_list, limit=None, batch_size=1000):
     indexer.commit()
     return
 
+def __read_popularity_counts(fp):
+    logger.info("Loading popularity data")
+    popularity_counts = []
+    for line in fp:
+        line = line.strip().decode("utf8")
+        if " " not in line:
+            continue
+        parts = line.split(" ", maxsplit=1)
+        popularity_counts.append(parts)
+    popularity_map = {pid: int(count) for count, pid in popularity_counts}
+    return popularity_map
+
 def setup_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("pid_list", metavar="pid-list",
-        help="List of pids to include")
+    parser.add_argument("pid_list", metavar="pid-list", help="List of pids to include")
     parser.add_argument("solr", help="solr url")
+    parser.add_argument("work_to_holdings_map_path",
+        metavar="work-to-holdings-map-path",
+        help="Path to holdings file path, saved in joblib format")
+    parser.add_argument("popularity_data", metavar="popularity-data",
+        help="path to file containing data (hit counts)")
     parser.add_argument("-l", "--limit", type=int, dest="limit", help="if set, limits the number of harvested loans")
     parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="verbose output")
     return parser.parse_args()
@@ -225,7 +255,11 @@ def main():
     if args.verbose:
         level = logging.DEBUG
     logging.basicConfig(format="%(asctime)s : %(levelname)s : %(message)s", level=level)
-    create_collection(args.solr, args.pid_list, args.limit)
+    pop_file_opener = gzip.open if args.popularity_data[-3:] == ".gz" else open
+    with open(args.work_to_holdings_map_path, "rb") as w2h_fp, pop_file_opener(args.popularity_data, "rb") as pop_fp:
+        pop_map = __read_popularity_counts(pop_fp)
+        work_to_holdings = joblib.load(w2h_fp)
+        create_collection(args.solr, args.pid_list, work_to_holdings, pop_map, args.limit)
 
 if __name__ == "__main__":
     main()
