@@ -50,49 +50,48 @@ def map_work_to_metadata(docs, pid2work):
     for work, metadata_entries in tqdm(work2metadata.items(), ncols=150):
         metadata_union = defaultdict(set)
         for metadata in metadata_entries:
-            logger.debug('title')
-            logger.debug(metadata['title'])
             if 'title' in metadata:
                 metadata_union['title'] = metadata['title']
                 metadata_union['title_alternative'] = metadata['title']
-            logger.debug('workid')
-            logger.debug(metadata['workId'])
             metadata_union['workid'] = metadata['workId']
             pid_list = []
+            work_types = set()
             if 'dbUnits' in metadata:
-                dbUnit_pid_dicts = metadata['dbUnits'].values()
-                for d in dbUnit_pid_dicts:
-                    logger.debug(d[0])
-                    if 'pid' in d[0]:
-                        pid_list.append(d[0]['pid'])
+                dbUnit_pid_dicts = metadata['dbUnits']
+                for unit in dbUnit_pid_dicts:
+                    # logger.info(unit)
+                    # logger.info(dbUnit_pid_dicts[unit])
+                    for d in dbUnit_pid_dicts[unit]:
+                        if 'pid' in d:
+                            pid_list.append(d['pid'])
+                        if 'types' in d:
+                            work_types |= set(d['types'])
                 logger.debug('pids')
                 logger.debug(",".join(pid_list))
             metadata_union['pids'] = pid_list
+            metadata_union['work_type'] = list(work_types)
             if len(metadata['creators']) > 0:
                 contributors = []
+                auts = []
                 for d in metadata['creators']:
-                    contributors.append(d['value'])
-                logger.debug('contributor')
-                logger.debug(contributors)
+                    if d['type'] == 'aut':
+                        auts.append(d['value'])
+                    else:
+                        contributors.append(d['value'])
                 metadata_union['contributor'] = contributors
                 metadata_union['contributor-phonetic'] = contributors
+                metadata_union['aut'] = auts
             if 'subjects' in metadata:
                 subjects = metadata['subjects']
-                subject_dk5 = next((x for x in subjects if x['type'] == 'DK5'), None)
-                subject_dbco = next((x for x in subjects if x['type'] == 'DBCO'), None)
-                if subject_dk5 and 'value' in subject_dk5:
-                    metadata['work_type'] = subject_dk5['value']
-                if subject_dbco and 'value' in subject_dbco:
-                    metadata['subject_dbc'] = subject_dbco['value']
-            metadata['language'] = 'dk'
+                dbc_subjects = set()
+                metadata_union['subject_dbc'] = []
+                for key in ['DBCF', 'DBCM', 'DBCN', 'DBCO', 'DBCS']:
+                    for d in subjects:
+                        if d['type'] == key:
+                            dbc_subjects.add(d['value'])
+                metadata_union['subject_dbc'] = list(dbc_subjects)
+            metadata_union['language'] = 'dk' # todo
             
-            # logger.info(metadata)
-            # for key, value in metadata.items():
-            #     # logger.info(key)
-            #     # logger.info(value)
-            #     metadata_union[key] |= set(value)
-        # for key, value in metadata_union.items():
-        #     metadata_union[key] = list(value)
         work2metadata_union[work] = dict(metadata_union)
     logger.debug(work2metadata_union)
     return work2metadata_union
@@ -159,7 +158,7 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, lim
         # collection identifiers and types.
 
         # pid_to_types_map = {p: ("---".join(docs[p]["collection"]),
-        #     "---".join(docs[p].get("type", []))) for p in pids}
+        #      "---".join(docs[p].get("type", []))) for p in pids}
         # pid_types_list = [f"{p}:::{pid_to_types_map[p][0]}:::{pid_to_types_map[p][1]}" for p in pids]
 
 
