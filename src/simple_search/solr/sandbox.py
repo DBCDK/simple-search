@@ -73,15 +73,14 @@ def map_work_to_metadata(docs, pid2work):
             metadata_union['work_type'] = list(work_types)
             metadata_union['pid2type'] = pid2type
             if len(metadata['creators']) > 0:
-                contributors = []
+                creators = []
                 auts = []
                 for d in metadata['creators']:
                     if d['type'] == 'aut':
                         auts.append(d['value'])
-                    else:
-                        contributors.append(d['value'])
-                metadata_union['contributor'] = contributors
-                metadata_union['contributor-phonetic'] = contributors
+                    creators.append(d['value'])
+                metadata_union['creator'] = creators
+                metadata_union['creator-phonetic'] = creators
                 metadata_union['aut'] = auts
             if 'subjects' in metadata:
                 subjects = metadata['subjects']
