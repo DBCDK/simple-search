@@ -56,20 +56,22 @@ def map_work_to_metadata(docs, pid2work):
             metadata_union['workid'] = metadata['workId']
             pid_list = []
             work_types = set()
+            pid2type = []
             if 'dbUnits' in metadata:
                 dbUnit_pid_dicts = metadata['dbUnits']
                 for unit in dbUnit_pid_dicts:
-                    # logger.info(unit)
-                    # logger.info(dbUnit_pid_dicts[unit])
                     for d in dbUnit_pid_dicts[unit]:
                         if 'pid' in d:
                             pid_list.append(d['pid'])
                         if 'types' in d:
                             work_types |= set(d['types'])
+                        if 'pid' in d and 'types' in d:
+                            pid2type.append(d['pid'] + ':::' + d['types'][0])
                 logger.debug('pids')
                 logger.debug(",".join(pid_list))
             metadata_union['pids'] = pid_list
             metadata_union['work_type'] = list(work_types)
+            metadata_union['pid2type'] = pid2type
             if len(metadata['creators']) > 0:
                 contributors = []
                 auts = []
@@ -123,6 +125,13 @@ def pid2corepo_work(pids) -> dict:
     return dict(p2cw)
 
 
+def pid_type_dict(pid_type_list : list) -> dict:
+    res = {}
+    for s in pid_type_list:
+        l = s.split(':::')
+        res[l[0]] = l[1]
+    return res
+
 def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, limit=None):
     """
     Creates solr documents based on rows from work presentation
@@ -162,9 +171,19 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, lim
         # pid_types_list = [f"{p}:::{pid_to_types_map[p][0]}:::{pid_to_types_map[p][1]}" for p in pids]
 
 
-        pid_types_list = [f"{p}" for p in pids]
         n_pids = math.log(len(pids) if len(pids) <9 else 9)+1
         metadata = work2metadata[work]
+        if 'pid2type' in metadata:
+            work_pid_types = pid_type_dict(metadata['pid2type'])
+            pid_types_list = []
+            for p in pids:
+                if p in work_pid_types:
+                    s = p + ":::" + "870970-basis---870970-danbib---870970-bibdk" + ":::" + work_pid_types[p]
+                    pid_types_list.append(s)
+                else:
+                    pid_types_list.append(p)
+        else:
+            pid_types_list = [f"{p}" for p in pids]
 #        years_since_publication = get_years_since_publication(metadata["year"]) if "year" in metadata else 99
         years_since_publication = 99
 
