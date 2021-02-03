@@ -42,7 +42,7 @@ def map_work_to_metadata(pid2work):
     """
     work2metadata = defaultdict(list)
     for pid, work in tqdm(pid2work.items(), ncols=150):
-        pidRows = _fetch("SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid = %s", pid)
+        pidRows = _fetch("SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid = '%s'", pid)
         for r in pidRows:
             work2metadata[work].append(r[1])
     work2metadata_union = {}
