@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 from psycopg2 import connect
 import psycopg2.extras
-
+import io
 from mobus import lowell_mapping_functions as lmf
 from simple_search.synonym_list import Synonyms
 import dbc_pyutils.solr
@@ -97,28 +97,36 @@ def map_work_to_metadata(docs, pid2work):
     logger.debug(work2metadata_union)
     return work2metadata_union
 
-def get_documents(sql, *args):
-    with dbc_pyutils.cursor.PostgresCursor(os.environ["WORK_PRESENTATION_URL"]) as cursor:
-        cursor.execute(sql, *args)
-        yield from cursor
+def get_docs(stmt, pids, args=None):
+    args = args if args else {}
+    with dbc_pyutils.cursor.PostgresCursor(os.environ['WORK_PRESENTATION_URL']) as cur:
+        pid_fp = io.StringIO()
+        for _id in pids:
+            pid_fp.write(f"{_id}\n")
+        pid_fp.seek(0)
+        cur.execute("CREATE TEMP TABLE pids_tmp(pid TEXT)")
+        cur.copy_from(pid_fp, "pids_tmp", columns=["pid"])
+        cur.execute(stmt, args)
+        for row in cur:
+            yield row
 
 def pid2pwork(pids) -> dict:
     """ Creates pid2work dict by fetching all relevant works from relations table in work-presentation-db """
     logger.info("fetching workids for %d pids", len(pids))
-    pids_tuple = tuple(pids)
     p2w = {}
-    for row in get_documents(
-        "SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid IN %s", (pids_tuple,)
+    for row in get_docs(
+            "SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)",
+            pids        
         ):
         p2w[row[0]] = row[1]
     return dict(p2w)
 
 def pid2corepo_work(pids) -> dict:
     logger.info("fetching corepo-workids for %d pids", len(pids))
-    pids_tuple = tuple(pids)
     p2cw = {}
-    for row in get_documents(
-        "SELECT manifestationid, corepoworkid FROM workcontains WHERE manifestationid IN %s", (pids_tuple,)
+    for row in get_docs(
+            "SELECT manifestationid, corepoworkid FROM workcontains WHERE manifestationid = ANY(SELECT pid FROM pids_tmp)",
+            pids
         ):
         p2cw[row[0]] = row[1]
     return dict(p2cw)
@@ -143,8 +151,11 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, lim
     pid2work = pid2pwork(pids)
     pid2cwork = pid2corepo_work(pids)
     logger.info("pid2work size %s", len(pid2work))
-    docs = {r[0]: r[1] for r in get_documents(
-        "SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid IN %s", (tuple(pids),))}
+    docs = {r[0]: r[1] for r in get_docs(
+                "SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid = ANY(SELECT pid FROM pids_tmp)",
+                pids
+            )
+        }
     logger.info("size of docs %s", len(docs))
 
     work2metadata = map_work_to_metadata(docs, pid2work)
