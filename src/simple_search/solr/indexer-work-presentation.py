@@ -35,16 +35,16 @@ import dbc_pyutils.cursor
 
 logger = logging.getLogger(__name__)
 
-def map_work_to_metadata(docs, pid2work):
+def map_work_to_metadata(pid2work):
     """
     Collects metadata from all pids in work, and returns
     dictionary with the collected information
     """
     work2metadata = defaultdict(list)
     for pid, work in tqdm(pid2work.items(), ncols=150):
-        if pid in docs:
-            work2metadata[work].append(docs[pid])
-    logger.debug(work2metadata)
+        pidRows = _fetch("SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid = %s", pid)
+        for r in pidRows:
+            work2metadata[work].append(r[1])
     work2metadata_union = {}
     logger.info("Fetching work metadata")
     for work, metadata_entries in tqdm(work2metadata.items(), ncols=150):
@@ -67,8 +67,6 @@ def map_work_to_metadata(docs, pid2work):
                             work_types |= set(d['types'])
                         if 'pid' in d and 'types' in d:
                             pid2type.append(d['pid'] + ':::' + d['types'][0])
-                logger.debug('pids')
-                logger.debug(",".join(pid_list))
             metadata_union['pids'] = pid_list
             metadata_union['work_type'] = list(work_types)
             metadata_union['pid2type'] = pid2type
@@ -94,8 +92,14 @@ def map_work_to_metadata(docs, pid2work):
             metadata_union['language'] = 'dk' # todo
             
         work2metadata_union[work] = dict(metadata_union)
-    logger.debug(work2metadata_union)
     return work2metadata_union
+
+def _fetch(stmt, args=None):
+    args = args if args else {}
+    with dbc_pyutils.cursor.PostgresCursor(os.environ['WORK_PRESENTATION_URL']) as cur:
+        cur.execute(stmt, args)
+        for row in cur:
+            yield row
 
 def get_docs(stmt, pids, args=None):
     args = args if args else {}
@@ -151,14 +155,14 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, lim
     pid2work = pid2pwork(pids)
     pid2cwork = pid2corepo_work(pids)
     logger.info("pid2work size %s", len(pid2work))
-    docs = {r[0]: r[1] for r in get_docs(
-                "SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid = ANY(SELECT pid FROM pids_tmp)",
-                pids
-            )
-        }
-    logger.info("size of docs %s", len(docs))
+    # docs = {r[0]: r[1] for r in get_docs(
+    #             "SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid = ANY(SELECT pid FROM pids_tmp)",
+    #             pids
+    #         )
+    #     }
+    # logger.info("size of docs %s", len(docs))
 
-    work2metadata = map_work_to_metadata(docs, pid2work)
+    work2metadata = map_work_to_metadata(pid2work)
     logger.info("work2metadata size %s", len(work2metadata))
 
     work2pids = defaultdict(list)
