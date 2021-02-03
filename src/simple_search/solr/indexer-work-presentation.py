@@ -44,13 +44,18 @@ def map_work_to_metadata(pid2work):
     Collects metadata from all pids in work, and returns
     dictionary with the collected information
     """
+    ## work2metadata : maps persistentworkid -> list of json from the corresponding pids' 
     work2metadata = defaultdict(list)
     chunks = listChunks(list(pid2work.items()), 100000)
     for chunk in tqdm(chunks, ncols=150):
         pidList = [pid for (pid, work) in chunk]
-        pidRows = _fetch("SELECT wc.manifestationid pid, wo.persistentworkid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid IN " + str(tuple(pidList)))
+        pidRows = get_docs(
+            "SELECT wo.persistentworkid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid IN (SELECT pid FROM pids_tmp)",
+            pidList
+        )
         for row in pidRows:
-            work2metadata[row[1]].append(row[2])
+            if not row[0] in work2metadata: # check prolly no needed
+                work2metadata[row[0]].append(row[1])
     work2metadata_union = {}
     logger.info("Fetching work metadata")
     for work, metadata_entries in tqdm(work2metadata.items(), ncols=150):
@@ -100,12 +105,12 @@ def map_work_to_metadata(pid2work):
         work2metadata_union[work] = dict(metadata_union)
     return work2metadata_union
 
-def _fetch(stmt, args=None):
-    args = args if args else {}
-    with dbc_pyutils.cursor.PostgresCursor(os.environ['WORK_PRESENTATION_URL']) as cur:
-        cur.execute(stmt, args)
-        for row in cur:
-            yield row
+# def _fetch(stmt, args=None):
+#     args = args if args else {}
+#     with dbc_pyutils.cursor.PostgresCursor(os.environ['WORK_PRESENTATION_URL']) as cur:
+#         cur.execute(stmt, args)
+#         for row in cur:
+#             yield row
 
 def get_docs(stmt, pids, args=None):
     args = args if args else {}
@@ -116,13 +121,14 @@ def get_docs(stmt, pids, args=None):
         pid_fp.seek(0)
         cur.execute("CREATE TEMP TABLE pids_tmp(pid TEXT)")
         cur.copy_from(pid_fp, "pids_tmp", columns=["pid"])
+        cur.execute("CREATE INDEX tmpi ON pids_tmp(pid)")
         cur.execute(stmt, args)
         for row in cur:
             yield row
 
 def pid2pwork(pids) -> dict:
     """ Creates pid2work dict by fetching all relevant works from relations table in work-presentation-db """
-    logger.info("fetching workids for %d pids", len(pids))
+    logger.info("fetching persistent workids for %d pids", len(pids))
     p2w = {}
     for row in get_docs(
             "SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)",
@@ -159,7 +165,7 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, lim
     with open(pid_list) as fp:
         pids = [f.strip() for f in fp][:limit]
     pid2work = pid2pwork(pids)
-    pid2cwork = pid2corepo_work(pids)
+    pid2cwork = pid2corepo_work(pids) ## used for holdings stuff
     logger.info("pid2work size %s", len(pid2work))
     # docs = {r[0]: r[1] for r in get_docs(
     #             "SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid = ANY(SELECT pid FROM pids_tmp)",
