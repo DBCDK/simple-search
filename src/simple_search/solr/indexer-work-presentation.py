@@ -35,16 +35,22 @@ import dbc_pyutils.cursor
 
 logger = logging.getLogger(__name__)
 
+def listChunks(lst, chunkSize : int):
+    for i in range(0,len(lst), chunkSize):
+        yield lst[i:i+chunkSize]
+
 def map_work_to_metadata(pid2work):
     """
     Collects metadata from all pids in work, and returns
     dictionary with the collected information
     """
     work2metadata = defaultdict(list)
-    for pid, work in tqdm(pid2work.items(), ncols=150):
-        pidRows = _fetch("SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid = '%s'" % pid)
-        for r in pidRows:
-            work2metadata[work].append(r[1])
+    chunks = listChunks(list(pid2work.items()), 100000)
+    for chunk in tqdm(chunks, ncols=150):
+        pidList = [pid for (pid, work) in chunk]
+        pidRows = _fetch("SELECT wc.manifestationid pid, wo.persistentworkid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid IN " + str(tuple(pidList)))
+        for row in pidRows:
+            work2metadata[row[1]].append(row[2])
     work2metadata_union = {}
     logger.info("Fetching work metadata")
     for work, metadata_entries in tqdm(work2metadata.items(), ncols=150):
