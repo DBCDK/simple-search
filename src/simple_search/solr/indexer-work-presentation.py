@@ -39,78 +39,67 @@ def listChunks(lst, chunkSize : int):
     for i in range(0,len(lst), chunkSize):
         yield lst[i:i+chunkSize]
 
-def map_work_to_metadata(pid2work):
+def map_work_to_metadata(pids):
     """
     Collects metadata from all pids in work, and returns
     dictionary with the collected information
     """
-    ## work2metadata : maps persistentworkid -> list of json from the corresponding pids' 
-    work2metadata = defaultdict(list)
-    chunks = listChunks(list(pid2work.items()), 100000)
-    for chunk in tqdm(chunks, ncols=150):
-        pidList = [pid for (pid, work) in chunk]
-        pidRows = get_docs(
-            "SELECT wo.persistentworkid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid IN (SELECT pid FROM pids_tmp)",
-            pidList
-        )
-        for row in pidRows:
-            if not row[0] in work2metadata: # check prolly no needed
-                work2metadata[row[0]].append(row[1])
+    ## work2metadata : maps persistentworkid -> json from workobject table 
+    work2metadata = defaultdict(dict)
+    workRows = get_docs(
+        "SELECT wo.persistentworkid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid IN (SELECT pid FROM pids_tmp)",
+        pids
+    )
+    for row in workRows:
+        if not row[0] in work2metadata: # check prolly no needed
+            work2metadata[row[0]] = row[1]
     work2metadata_union = {}
     logger.info("Fetching work metadata")
-    for work, metadata_entries in tqdm(work2metadata.items(), ncols=150):
+    for work, metadata in tqdm(work2metadata.items(), ncols=150):
         metadata_union = defaultdict(set)
-        for metadata in metadata_entries:
-            if 'title' in metadata:
-                metadata_union['title'] = metadata['title']
-                metadata_union['title_alternative'] = metadata['title']
-            metadata_union['workid'] = metadata['workId']
-            pid_list = []
-            work_types = set()
-            pid2type = []
-            if 'dbUnits' in metadata:
-                dbUnit_pid_dicts = metadata['dbUnits']
-                for unit in dbUnit_pid_dicts:
-                    for d in dbUnit_pid_dicts[unit]:
-                        if 'pid' in d:
-                            pid_list.append(d['pid'])
-                        if 'types' in d:
-                            work_types |= set(d['types'])
-                        if 'pid' in d and 'types' in d:
-                            pid2type.append(d['pid'] + ':::' + d['types'][0])
-            metadata_union['pids'] = pid_list
-            metadata_union['work_type'] = list(work_types)
-            metadata_union['pid2type'] = pid2type
-            if len(metadata['creators']) > 0:
-                creators = []
-                auts = []
-                for d in metadata['creators']:
-                    if d['type'] == 'aut':
-                        auts.append(d['value'])
-                    creators.append(d['value'])
-                metadata_union['creator'] = creators
-                metadata_union['creator-phonetic'] = creators
-                metadata_union['aut'] = auts
-            if 'subjects' in metadata:
-                subjects = metadata['subjects']
-                dbc_subjects = set()
-                metadata_union['subject_dbc'] = []
-                for key in ['DBCF', 'DBCM', 'DBCN', 'DBCO', 'DBCS']:
-                    for d in subjects:
-                        if d['type'] == key:
-                            dbc_subjects.add(d['value'])
-                metadata_union['subject_dbc'] = list(dbc_subjects)
-            metadata_union['language'] = 'dk' # todo
+        if 'title' in metadata:
+            metadata_union['title'] = metadata['title']
+            metadata_union['title_alternative'] = metadata['title']
+        metadata_union['workid'] = metadata['workId']
+        pid_list = []
+        work_types = set()
+        pid2type = []
+        if 'dbUnits' in metadata:
+            dbUnit_pid_dicts = metadata['dbUnits']
+            for unit in dbUnit_pid_dicts:
+                for d in dbUnit_pid_dicts[unit]:
+                    if 'pid' in d:
+                        pid_list.append(d['pid'])
+                    if 'types' in d:
+                        work_types |= set(d['types'])
+                    if 'pid' in d and 'types' in d:
+                        pid2type.append(d['pid'] + ':::' + d['types'][0])
+        metadata_union['pids'] = pid_list
+        metadata_union['work_type'] = list(work_types)
+        metadata_union['pid2type'] = pid2type
+        if len(metadata['creators']) > 0:
+            creators = []
+            auts = []
+            for d in metadata['creators']:
+                if d['type'] == 'aut':
+                    auts.append(d['value'])
+                creators.append(d['value'])
+            metadata_union['creator'] = creators
+            metadata_union['creator-phonetic'] = creators
+            metadata_union['aut'] = auts
+        if 'subjects' in metadata:
+            subjects = metadata['subjects']
+            dbc_subjects = set()
+            metadata_union['subject_dbc'] = []
+            for key in ['DBCF', 'DBCM', 'DBCN', 'DBCO', 'DBCS']:
+                for d in subjects:
+                    if d['type'] == key:
+                        dbc_subjects.add(d['value'])
+            metadata_union['subject_dbc'] = list(dbc_subjects)
+        metadata_union['language'] = 'dk' # todo
             
         work2metadata_union[work] = dict(metadata_union)
     return work2metadata_union
-
-# def _fetch(stmt, args=None):
-#     args = args if args else {}
-#     with dbc_pyutils.cursor.PostgresCursor(os.environ['WORK_PRESENTATION_URL']) as cur:
-#         cur.execute(stmt, args)
-#         for row in cur:
-#             yield row
 
 def get_docs(stmt, pids, args=None):
     args = args if args else {}
@@ -121,21 +110,20 @@ def get_docs(stmt, pids, args=None):
         pid_fp.seek(0)
         cur.execute("CREATE TEMP TABLE pids_tmp(pid TEXT)")
         cur.copy_from(pid_fp, "pids_tmp", columns=["pid"])
-        cur.execute("CREATE INDEX tmpi ON pids_tmp(pid)")
         cur.execute(stmt, args)
         for row in cur:
             yield row
 
-def pid2pwork(pids) -> dict:
-    """ Creates pid2work dict by fetching all relevant works from relations table in work-presentation-db """
+def pwork2pids(pids) -> dict:
+    """ Creates work -> (pids list) dict by fetching all relevant works from relations table in work-presentation-db """
     logger.info("fetching persistent workids for %d pids", len(pids))
-    p2w = {}
+    pw2p = defaultdict(list)
     for row in get_docs(
             "SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)",
             pids        
         ):
-        p2w[row[0]] = row[1]
-    return dict(p2w)
+        pw2p[row[1]].append(row[0])
+    return pw2p
 
 def pid2corepo_work(pids) -> dict:
     logger.info("fetching corepo-workids for %d pids", len(pids))
@@ -164,23 +152,12 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, lim
     """
     with open(pid_list) as fp:
         pids = [f.strip() for f in fp][:limit]
-    pid2work = pid2pwork(pids)
+    work2pids = pwork2pids(pids)
     pid2cwork = pid2corepo_work(pids) ## used for holdings stuff
-    logger.info("pid2work size %s", len(pid2work))
-    # docs = {r[0]: r[1] for r in get_docs(
-    #             "SELECT wc.manifestationid pid, wo.content FROM workcontains wc JOIN workobject wo ON wo.corepoworkid = wc.corepoworkid WHERE wc.manifestationid = ANY(SELECT pid FROM pids_tmp)",
-    #             pids
-    #         )
-    #     }
-    # logger.info("size of docs %s", len(docs))
-
-    work2metadata = map_work_to_metadata(pid2work)
+    logger.info("work2pids size %s", len(work2pids))
+    work2metadata = map_work_to_metadata(pids)
     logger.info("work2metadata size %s", len(work2metadata))
 
-    work2pids = defaultdict(list)
-    for pid, work in pid2work.items():
-        work2pids[work].append(pid)
-    logger.info("created work2pids")
 
     for work, pids in tqdm(work2pids.items()):
         # Solr doesn't have a field type which can be used as a tuple
