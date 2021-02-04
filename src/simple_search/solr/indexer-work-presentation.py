@@ -236,9 +236,13 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, pop_map, limit=N
     logger.info(f"Created {len(doc_chunks)} document chunk (size={batch_size})")
     logger.info(f"Indexing into solr at {solr_url}")
     indexer = dbc_pyutils.solr.SolrIndexer(solr_url)
+    i = 0
     for batch in tqdm(doc_chunks, ncols=150):
         indexer(batch)
-    indexer.commit()
+        i + 1
+        if i > 99:
+            indexer.commit()
+            i = 0
     return
 
 def __read_popularity_counts(fp):
