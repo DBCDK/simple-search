@@ -173,46 +173,43 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, lim
         #      "---".join(docs[p].get("type", []))) for p in pids}
         # pid_types_list = [f"{p}:::{pid_to_types_map[p][0]}:::{pid_to_types_map[p][1]}" for p in pids]
 
+        if work in work2metadata:
+            n_pids = math.log(len(pids) if len(pids) <9 else 9)+1
+            metadata = work2metadata[work]
+            if 'pid2type' in metadata:
+                work_pid_types = pid_type_dict(metadata['pid2type'])
+                pid_types_list = []
+                for p in pids:
+                    if p in work_pid_types:
+                        s = p + ":::" + "870970-basis---870970-danbib---870970-bibdk" + ":::" + work_pid_types[p]
+                        pid_types_list.append(s)
+                    else:
+                        pid_types_list.append(p)
+            else:
+                pid_types_list = [f"{p}" for p in pids]
+    #        years_since_publication = get_years_since_publication(metadata["year"]) if "year" in metadata else 99
+            years_since_publication = 99
 
-        n_pids = math.log(len(pids) if len(pids) <9 else 9)+1
-        metadata = work2metadata[work]
-        if 'pid2type' in metadata:
-            work_pid_types = pid_type_dict(metadata['pid2type'])
-            pid_types_list = []
-            for p in pids:
-                if p in work_pid_types:
-                    s = p + ":::" + "870970-basis---870970-danbib---870970-bibdk" + ":::" + work_pid_types[p]
-                    pid_types_list.append(s)
-                else:
-                    pid_types_list.append(p)
-        else:
-            pid_types_list = [f"{p}" for p in pids]
-#        years_since_publication = get_years_since_publication(metadata["year"]) if "year" in metadata else 99
-        years_since_publication = 99
+            # Add one to holdings and popularity to avoid zeros since boosting is multiplicative
+            holdings_sum = sum(int(work_to_holdings_map.get(pid2cwork.get(pid, 'hest'), 0)) for pid in pids)
+            holdings = math.log(holdings_sum) + 1 if holdings_sum > 0 else 1
 
-        # Add one to holdings and popularity to avoid zeros since boosting is multiplicative
-        holdings_sum = sum(int(work_to_holdings_map.get(pid2cwork.get(pid, 'hest'), 0)) for pid in pids)
-        holdings = math.log(holdings_sum) + 1 if holdings_sum > 0 else 1
-#        holdings = 1
+            popularity_sum = sum(pop_map[pid] for pid in pids if pid in pop_map)
+            popularity = math.log(popularity_sum) + 1 if popularity_sum > 0 else 1
+            document = { # "title": title,
+                        "workid": work,
+                        "pids": pids,
+                        "pid_to_type_map": pid_types_list,
+                        "n_pids": n_pids,
+                        "holdings": holdings,
+                        "popularity": popularity,
+                        "years_since_publication": years_since_publication}
+            document.update(add_keys(metadata, ["title", "title_alternative", "aut",
+                "creator", "creator_sort", "contributor", "work_type",
+                "language", "subject_dbc", "series"]))
+            logger.debug(document)
 
-        popularity_sum = sum(pop_map[pid] for pid in pids if pid in pop_map)
-        popularity = math.log(popularity_sum) + 1 if popularity_sum > 0 else 1
-#        popularity = 1
-        document = { # "title": title,
-                    "workid": work,
-                    "pids": pids,
-                    "pid_to_type_map": pid_types_list,
-                    "n_pids": n_pids,
-                    "holdings": holdings,
-                    "popularity": popularity,
-                    "years_since_publication": years_since_publication}
-        logger.debug(document)
-        document.update(add_keys(metadata, ["title", "title_alternative", "aut",
-            "creator", "creator_sort", "contributor", "work_type",
-            "language", "subject_dbc", "series"]))
-        logger.debug(document)
-
-        yield document
+            yield document
 
 def chunks(l, n):
     for i in range(0, len(l), n):
