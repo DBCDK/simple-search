@@ -239,10 +239,11 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, pop_map, limit=N
     i = 0
     for batch in tqdm(doc_chunks, ncols=150):
         indexer(batch)
-        i + 1
+        i = i + 1
         if i > 99:
             indexer.commit()
             i = 0
+    indexer.commit()
     return
 
 def __read_popularity_counts(fp):
