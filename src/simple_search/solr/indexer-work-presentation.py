@@ -31,7 +31,58 @@ from mobus import lowell_mapping_functions as lmf
 from simple_search.synonym_list import Synonyms
 import dbc_pyutils.solr
 import dbc_pyutils.cursor
+from dbc_pyutils import Time
 
+
+class ThreadedSolrIndexer():
+    """
+    Solr indexer.
+    Indexer with batch functionality and parallel indexing from
+    multiple threads
+    """
+    def __init__(self, url, num_threads=1, batch_size=1000):
+        """
+        Initializes indexer
+
+        :param url:
+            url of solr collection
+        :param num_threads:
+            Number of parallel indexer threads
+        :param batch_size:
+            Number of documents in each batch
+        """
+        self.url = url.rstrip('/')
+        self.num_threads = num_threads
+        self.batch_size = batch_size
+        logger.info(f'Solr indexer initialized url={self.url}, num_threads={self.num_threads}, batch_size={self.batch_size}')
+
+    def __call__(self, documents):
+        return self.index(documents)
+
+    def index(self, documents):
+        """
+        indexes docs into solr
+
+        :param docs:
+            list of docs to index
+        """
+        doc_chunks = (chunk for chunk in self.__chunks(documents, self.batch_size))
+        rs = (grequests.post(self.url + '/update', data=json.dumps(docs), headers={'Content-Type': 'application/json'})
+              for docs in doc_chunks)
+        responses = grequests.map(rs, size=self.num_threads)
+        for response in responses:
+            if not response.ok:
+                response.raise_for_status()
+
+    def commit(self):
+        """ commits changed to solr collection """
+        resp = requests.get(self.url + '/update', params={'commit': 'true'})
+        if not resp.ok:
+            resp.raise_for_status()
+
+    def __chunks(self, l, n):
+        for i in range(0, len(l), n):
+            yield l[i: i+n]
 
 logger = logging.getLogger(__name__)
 
@@ -232,17 +283,10 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, pop_map, limit=N
     """
     logger.info("Retrieving data from db")
     documents = [d for d in make_solr_documents(pid_list, work_to_holdings_map, pop_map, limit)]
-    doc_chunks = [c for c in chunks(documents, batch_size)]
-    logger.info(f"Created {len(doc_chunks)} document chunk (size={batch_size})")
     logger.info(f"Indexing into solr at {solr_url}")
-    indexer = dbc_pyutils.solr.SolrIndexer(solr_url)
-    i = 0
-    for batch in tqdm(doc_chunks, ncols=150):
-        indexer(batch)
-        i = i + 1
-        if i > 9:
-            indexer.commit()
-            i = 0
+    indexer = ThreadedSolrIndexer(solr_url, num_threads=10, batch_size=batch_size)
+    with Time("Indexing into solr took: ", level="info"):
+        indexer.index(documents)
     indexer.commit()
     return
 
