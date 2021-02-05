@@ -240,7 +240,7 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, pop_map, limit=N
     for batch in tqdm(doc_chunks, ncols=150):
         indexer(batch)
         i = i + 1
-        if i > 99:
+        if i > 9:
             indexer.commit()
             i = 0
     indexer.commit()
