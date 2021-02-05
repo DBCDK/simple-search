@@ -10,6 +10,10 @@ indexer
 Creates document collection.
 
 """
+import requests
+import grequests
+
+import json
 
 import argparse
 import collections
@@ -287,7 +291,8 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, pop_map, limit=N
     indexer = ThreadedSolrIndexer(solr_url, num_threads=10, batch_size=batch_size)
     with Time("Indexing into solr took: ", level="info"):
         indexer.index(documents)
-    indexer.commit()
+    with Time("Committing docs in solr took:", level="info"):
+        indexer.commit()
     return
 
 def __read_popularity_counts(fp):
