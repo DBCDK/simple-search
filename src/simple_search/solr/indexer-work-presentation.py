@@ -80,7 +80,11 @@ class ThreadedSolrIndexer():
 
     def commit(self):
         """ commits changed to solr collection """
-        resp = requests.get(self.url + '/update', params={'commit': 'true'})
+        try:
+            resp = requests.get(self.url + '/update', params={'commit': 'true'})
+        except Exception as e:
+            print('Committing to solr failed!')
+            raise
         if not resp.ok:
             resp.raise_for_status()
 
