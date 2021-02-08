@@ -110,7 +110,7 @@ def create_collection(solr_url, docs, limit=None, batch_size=1000):
 
 def setup_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("filename", dest="filename", help="file with docs")
+    parser.add_argument("filename", help="file with docs")
     parser.add_argument("solr", help="solr url")
     parser.add_argument("-l", "--limit", type=int, dest="limit", help="if set, limits the number of harvested loans")
     parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="verbose output")
