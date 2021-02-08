@@ -87,6 +87,7 @@ class ThreadedSolrIndexer():
             raise
         if not resp.ok:
             resp.raise_for_status()
+        return
 
     def __chunks(self, l, n):
         for i in range(0, len(l), n):
@@ -295,8 +296,9 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, pop_map, limit=N
     indexer = ThreadedSolrIndexer(solr_url, num_threads=10, batch_size=batch_size)
     with Time("Indexing into solr took: ", level="info"):
         indexer.index(documents)
-    with Time("Committing docs in solr took:", level="info"):
-        indexer.commit()
+    logger.info("Committing to solr...")
+    # indexer.commit()
+    logger.info("Commit to solr done!")
     return
 
 def __read_popularity_counts(fp):
