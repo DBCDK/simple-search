@@ -20,7 +20,6 @@ services response.
 The schema for the solr can be found [here](https://gitlab.dbc.dk/ai/simple-search-solr/-/blob/master/conf/conf/managed-schema)
 in the [simple-search-solr project](https://gitlab.dbc.dk/ai/simple-search-solr)
 
-
 ## Search Engine
 
 The search engeine is exposed through kubernetes at [http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk/search](http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk/search)
@@ -76,3 +75,11 @@ example of using get:
 The also provides a simple GUI for exploratory work. Each hit has a cover (if any) and links to [bibliotek.dk](https://bibliotek.dk/)
 
 The GUI can be found at [http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk](http://simple-search-1-0.mi-prod.svc.cloud.dbc.dk)
+
+## Work-presentation data
+
+The file `indexer_work_presentation.py` (at the time of writing) is a first attempt to do simple search with data from the work-presentation database. Here is an example of how to run it.
+
+    WORK_PRESENTATION_URL=postgres://$WORK_PRESENTATION_POSTGRES_URL python src/simple_search/solr/indexer_work_presentation.py 773000.pids http://localhost:8983/solr/simple-search/ work_to_holdings.joblib popularity-2018-2020.count.gz
+
+where the `773000.pids` and the other files were found on artifactory `ai-generic/simple-search/`.
