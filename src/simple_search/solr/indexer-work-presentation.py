@@ -292,13 +292,13 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, pop_map, limit=N
     """
     logger.info("Retrieving data from db")
     documents = [d for d in make_solr_documents(pid_list, work_to_holdings_map, pop_map, limit)]
-    if len(solr_url > 5):
+    if len(solr_url) > 5:
         logger.info(f"Indexing into solr at {solr_url}")
         indexer = ThreadedSolrIndexer(solr_url, num_threads=10, batch_size=batch_size)
         with Time("Indexing into solr took: ", level="info"):
             indexer.index(documents)
         logger.info("Committing to solr...")
-        # indexer.commit()
+        indexer.commit()
         logger.info("Commit to solr done!")
         return
     else:
