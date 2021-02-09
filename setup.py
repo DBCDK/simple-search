@@ -14,6 +14,7 @@ setup(name="simple-search",
         {"console_scripts": [
             "simple-search-service = simple_search.service:main",
             "solr-indexer = simple_search.solr.indexer:main",
+            "wp-solr-indexer = simple_search.solr.indexer_work_presentation:main",
             "pid-list-generator = simple_search.solr.pid_fetcher:main",
             "generate-work-to-holdings-map = simple_search.solr.indexer:generate_work_to_holdings_map",
             "generate-synonym-list = simple_search.synonym_list:cli",
