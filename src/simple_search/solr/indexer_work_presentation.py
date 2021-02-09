@@ -16,23 +16,16 @@ import grequests
 import json
 
 import argparse
-import collections
 from collections import defaultdict
-import datetime
 import gzip
 import math
 import os
-import sys
 import joblib
 import logging
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-from psycopg2 import connect
-import psycopg2.extras
 import io
-from mobus import lowell_mapping_functions as lmf
-from simple_search.synonym_list import Synonyms
 import dbc_pyutils.solr
 import dbc_pyutils.cursor
 from dbc_pyutils import Time
@@ -267,8 +260,6 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, lim
             document.update(add_keys(metadata, ["title", "title_alternative", "aut",
                 "creator", "creator_sort", "contributor", "work_type",
                 "language", "subject_dbc", "series"]))
-            logger.debug(document)
-
             yield document
 
 def chunks(l, n):
