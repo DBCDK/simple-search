@@ -88,10 +88,6 @@ class ThreadedSolrIndexer():
 
 logger = logging.getLogger(__name__)
 
-def listChunks(lst, chunkSize : int):
-    for i in range(0,len(lst), chunkSize):
-        yield lst[i:i+chunkSize]
-
 def map_work_to_metadata(pids):
     """
     Collects metadata from all pids in work, and returns
@@ -222,10 +218,6 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, lim
         # pid, collection identifier, and type, and --- separating the individual
         # collection identifiers and types.
 
-        # pid_to_types_map = {p: ("---".join(docs[p]["collection"]),
-        #      "---".join(docs[p].get("type", []))) for p in pids}
-        # pid_types_list = [f"{p}:::{pid_to_types_map[p][0]}:::{pid_to_types_map[p][1]}" for p in pids]
-
         if work in work2metadata:
             n_pids = math.log(len(pids) if len(pids) <9 else 9)+1
             metadata = work2metadata[work]
@@ -283,20 +275,14 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, pop_map, limit=N
     """
     logger.info("Retrieving data from db")
     documents = [d for d in make_solr_documents(pid_list, work_to_holdings_map, pop_map, limit)]
-    if len(solr_url) > 5:
-        logger.info(f"Indexing into solr at {solr_url}")
-        indexer = ThreadedSolrIndexer(solr_url, num_threads=10, batch_size=batch_size)
-        with Time("Indexing into solr took: ", level="info"):
-            indexer.index(documents)
-        logger.info("Committing to solr...")
-        indexer.commit()
-        logger.info("Commit to solr done!")
-        return
-    else:
-        s = 'output-json-' + solr_url
-        with open(s + '.json', 'w') as outfile:
-            json.dump(documents, outfile)
-        return
+    logger.info(f"Indexing into solr at {solr_url}")
+    indexer = ThreadedSolrIndexer(solr_url, num_threads=10, batch_size=batch_size)
+    with Time("Indexing into solr took: ", level="info"):
+        indexer.index(documents)
+    logger.info("Committing to solr...")
+    indexer.commit()
+    logger.info("Commit to solr done!")
+    return
 
 def __read_popularity_counts(fp):
     logger.info("Loading popularity data")
