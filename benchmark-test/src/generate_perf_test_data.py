@@ -39,7 +39,9 @@ def fetch_requests_for_performance_test_simple_search(num=1000, filename='simple
         requests = random.sample(all_requests, num)
         with open(filename, 'w') as f:
             for request in requests:
-                f.write(json.dumps(request) + '\n')   
+                # add smart-search:
+                request['options'] = {'include-smartsearch': True}
+                f.write(json.dumps(request) + '\n')
 
 
 def cli():
@@ -49,8 +51,8 @@ def cli():
                         help='filename to write requests into')
     parser.add_argument('-n', '--num', default=1000, type=int, help='Number of requests to generate')
     return parser.parse_args()
-    
-    
+
+
 def run():
     args = cli()
     fetch_requests_for_performance_test_simple_search(args.num, args.outfilename)

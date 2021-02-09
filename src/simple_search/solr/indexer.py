@@ -10,11 +10,15 @@ indexer
 Creates document collection.
 
 """
+import requests
+import grequests
 
+import json
 import argparse
 import collections
 from collections import defaultdict
 import datetime
+from multiprocessing import Pool
 import gzip
 import math
 import os
@@ -24,13 +28,70 @@ import logging
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-
+from functools import partial
 from mobus import lowell_mapping_functions as lmf
 from simple_search.synonym_list import Synonyms
-import dbc_pyutils.solr
 import dbc_pyutils.cursor
 
+from dbc_pyutils import Time
+
 logger = logging.getLogger(__name__)
+
+# Disable tqdm when building on jenkins, as it does not implement \r, and you'll get some messy output
+tqdm = partial(tqdm, ncols=150, disable=(not sys.stdout.isatty()))
+
+
+class ThreadedSolrIndexer():
+    """
+    Solr indexer.
+    Indexer with batch functionality and parallel indexing from
+    multiple threads
+    """
+    def __init__(self, url, num_threads=1, batch_size=1000):
+        """
+        Initializes indexer
+
+        :param url:
+            url of solr collection
+        :param num_threads:
+            Number of parallel indexer threads
+        :param batch_size:
+            Number of documents in each batch
+        """
+        self.url = url.rstrip('/')
+        self.num_threads = num_threads
+        self.batch_size = batch_size
+        logger.info(f'Solr indexer initialized url={self.url}, num_threads={self.num_threads}, batch_size={self.batch_size}')
+
+    def __call__(self, documents):
+        return self.index(documents)
+
+    def index(self, documents):
+        """
+        indexes docs into solr
+
+        :param docs:
+            list of docs to index
+        """
+        doc_chunks = (chunk for chunk in self.__chunks(documents, self.batch_size))
+        rs = (grequests.post(self.url + '/update', data=json.dumps(docs), headers={'Content-Type': 'application/json'})
+              for docs in doc_chunks)
+        responses = grequests.map(rs, size=self.num_threads)
+        for response in responses:
+            if not response.ok:
+                response.raise_for_status()
+
+    def commit(self):
+        """ commits changed to solr collection """
+        resp = requests.get(self.url + '/update', params={'commit': 'true'})
+        if not resp.ok:
+            resp.raise_for_status()
+
+    def __chunks(self, l, n):
+        for i in range(0, len(l), n):
+            yield l[i: i+n]
+
+
 
 def map_work_to_metadata(docs, pid2work):
     """
@@ -38,12 +99,12 @@ def map_work_to_metadata(docs, pid2work):
     dictionary with the collected information
     """
     work2metadata = defaultdict(list)
-    for pid, work in tqdm(pid2work.items(), ncols=150):
+    for pid, work in tqdm(pid2work.items()):
         if pid in docs:
             work2metadata[work].append(docs[pid])
     work2metadata_union = {}
     logger.info("Fetching work metadata")
-    for work, metadata_entries in tqdm(work2metadata.items(), ncols=150):
+    for work, metadata_entries in tqdm(work2metadata.items()):
         metadata_union = defaultdict(set)
         for metadata in metadata_entries:
             for key, value in metadata.items():
@@ -95,6 +156,30 @@ def generate_work_to_holdings_map():
     with open(args.output, "wb") as fp:
         joblib.dump(work_to_holdings, fp)
 
+
+def merge_dicts(dictionaries):
+    d = {}
+    for dictionary in dictionaries:
+        d.update(dictionary)
+    return d
+
+
+def __get_data(pids):
+    pid2work = lmf.pid2work(pids)
+    docs = {r[0]: r[1] for r in get_documents(
+            "SELECT pid, metadata FROM metadata WHERE pid IN %s", (tuple(pids),))}
+    return pid2work, docs
+
+
+def get_data(pids, num_workers=16):
+    logger.info('Fetching data from db in %d worker processes', num_workers)
+    args = np.array_split(pids, num_workers)
+    with Pool(num_workers) as p:
+        result = p.map(__get_data, args)
+    pid2work, metadata = zip(*result)
+    return merge_dicts(pid2work), merge_dicts(metadata)
+
+
 def make_solr_documents(pid_list, work_to_holdings_map: dict, popularity_map: dict, synonym_container, limit=None):
     """
     Creates solr documents based on rows from LOWELL
@@ -104,10 +189,10 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, popularity_map: di
     """
     with open(pid_list) as fp:
         pids = [f.strip() for f in fp][:limit]
-    pid2work = lmf.pid2work(pids)
-    logger.info("pid2work size %s", len(pid2work))
-    docs = {r[0]: r[1] for r in get_documents(
-        "SELECT pid, metadata FROM metadata WHERE pid IN %s", (tuple(pids),))}
+    logger.info("Retrieving data from db")
+
+    with Time('Fetching data took', level='info'):
+        pid2work, docs = get_data(pids)
     logger.info("size of docs %s", len(docs))
 
     work2metadata = map_work_to_metadata(docs, pid2work)
@@ -188,14 +273,13 @@ def create_collection(solr_url, pid_list, work_to_holdings_map, popularity_map: 
     """
     logger.info('Reading subject synonyms')
     synonyms = Synonyms(synonym_file)
-    logger.info("Retrieving data from db")
     documents = [d for d in make_solr_documents(pid_list, work_to_holdings_map, popularity_map, synonyms, limit)]
-    doc_chunks = [c for c in chunks(documents, batch_size)]
-    logger.info(f"Created {len(doc_chunks)} document chunk (size={batch_size})")
-    logger.info(f"Indexing into solr at {solr_url}")
-    indexer = dbc_pyutils.solr.SolrIndexer(solr_url)
-    for batch in tqdm(doc_chunks, ncols=150):
-        indexer(batch)
+
+    indexer = ThreadedSolrIndexer(solr_url, num_threads=10, batch_size=batch_size)
+    with Time("Indexing into solr took ", level="info"):
+        logger.info(f"Indexing into solr at {solr_url}")
+        indexer.index(documents)
+    logger.info('Comitting documents')
     indexer.commit()
 
 def setup_args():

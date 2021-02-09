@@ -5,7 +5,7 @@ def workerNode = "xp-build-i01"
 pipeline {
 	agent { label workerNode }
 	environment {
-		LOWELL_URL = credentials("lowell_db_connection_string")
+		LOWELL_URL = credentials("ny-lowell-prod")
 	}
 	triggers {
 		cron("0 5 * * *")
@@ -23,11 +23,6 @@ pipeline {
 				}
 			}
 			steps {
-				sh "rm -rf seca2019"
-				dir("seca2019") {
-					git credentialsId: "gitlab-deploy-key",
-						url: "gitlab@gitlab.dbc.dk:ai/seca2019.git"
-				}
 				sh """#!/usr/bin/env bash
 					set -xe
 					rm -rf env output
@@ -35,9 +30,9 @@ pipeline {
 					source env/bin/activate
 					pip install -U pip search-relevance-eval matplotlib
 					pip install .
-					evaluate-search http://simple-search-evaluation-1-0.mi-prod.svc.cloud.dbc.dk/search seca2019 output
+					evaluate-search http://simple-search-evaluation-1-0.mi-prod.svc.cloud.dbc.dk/search output
 				"""
-				archiveArtifacts artifacts: "output/*.png,src/simple_search/data/html/evaluation.html"
+				archiveArtifacts artifacts: "output/*.png,src/simple_search/data/html/evaluation.html,*.pkl"
 			}
 		}
 	}

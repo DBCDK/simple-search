@@ -15,16 +15,21 @@ from dbc_pyutils import StatusHandler
 from dbc_pyutils import build_info
 from dbc_pyutils import Statistics
 from dbc_pyutils import CoverUrls
+import rrflow.utils
 
 from .solr.search import Searcher
 
 STATS = {"search": Statistics(name="search")}
 
-logger = logging.getLogger(__name__)
+logger = rrflow.utils.setup_logging()
+
+AUTHKEYMAP = json.loads(os.environ["AUTHKEYMAP"])
 
 def setup_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("solr_url", metavar="solr-url")
+    parser.add_argument("--smart-search", dest="smart_search", help="file with smartsearch model content")
+    parser.add_argument("--curated-search", dest="curated_search", help="file with curated search content")
     parser.add_argument("-p", "--port", default=5000)
     return parser.parse_args()
 
@@ -53,19 +58,31 @@ class ConfigHandler(BaseHandler):
             config = json.load(f)
             queries = [query['q'] for query in config['queries']]
         self.write(json.dumps({'queries': queries}))
-        
-        
+
+
 class SearchHandler(BaseHandler):
     def initialize(self, searcher):
         self.searcher = searcher
 
     def post(self):
         body = json.loads(self.request.body.decode("utf8"))
+        if "access-token" not in body:
+            #self.set_status(401)
+            #return self.write("No access-token provided")
+            logger.info(f"No access-token provided")
+        else:
+            access_token = body["access-token"]
+            if access_token not in AUTHKEYMAP.values():
+                #self.set_status(401)
+                #return self.write(f"Unauthorized access token {access_token}")
+                logger.info(f"Unauthorized access token {access_token}")
         query = body["q"]
         debug = body.get("debug", False)
+        start = body.get("start", 0)
         rows = body.get("rows", 10)
         options = body.get("options", {})
-        result = {"result": [doc for doc in self.searcher.search(query, debug, options, rows)]}
+        result = {"result": [doc for doc in self.searcher.search(query,
+            debug, options=options, rows=rows, start=start)]}
         self.write(result)
 
     def get(self):
@@ -73,18 +90,19 @@ class SearchHandler(BaseHandler):
         debug = self.get_argument('debug', 'False')
         debug = True if debug.lower() in {'true', '1'} else False
         rows = int(self.get_argument("rows", "10"))
-        result = {"result": [doc for doc in self.searcher.search(query, debug, rows)]}
+        result = {"result": [doc for doc in self.searcher.search(query, debug, rows=rows)]}
         self.write(result)
 
 
 class DefaultHandler(BaseHandler):
     def get(self):
         with open(resource_filename("simple_search",
-                "data/cfg/search_results_tester_config.json")) as fp:
+                                    "data/cfg/search_results_tester_config.json")) as fp:
             config = json.load(fp)
             queries = [query["q"] for query in config["queries"]]
         path = resource_filename("simple_search", "data/html/index.html")
         self.render(path, queries=queries)
+
 
 class APIHandler(BaseHandler):
     def get(self):
@@ -95,7 +113,7 @@ class APIHandler(BaseHandler):
 def main():
     args = setup_args()
     info = build_info.get_info("simple_search")
-    searcher = Searcher(args.solr_url)
+    searcher = Searcher(args.solr_url, args.smart_search, args.curated_search)
     tornado_app = tornado.web.Application([
         ("/", DefaultHandler),
         ("/config", ConfigHandler),

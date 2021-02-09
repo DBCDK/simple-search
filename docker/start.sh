@@ -2,4 +2,4 @@
 
 set -xe
 
-simple-search-service --port 5000 $SOLR_URL
+simple-search-service --port 5000  --smart-search search2works.json --curated-search curated-searches.jsonl $SOLR_URL
