@@ -78,7 +78,7 @@ class ThreadedSolrIndexer():
               for docs in doc_chunks)
         responses = grequests.map(rs, size=self.num_threads)
         for response in responses:
-            if not response.ok:
+            if response is None or not response.ok:
                 response.raise_for_status()
 
     def commit(self):
