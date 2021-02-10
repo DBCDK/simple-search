@@ -166,15 +166,12 @@ def get_docs(stmt, pids, args=None):
 def pwork2pids(pids) -> dict:
     """ Creates work -> (pids list) dict by fetching all relevant works from relations table in work-presentation-db """
     logger.info("fetching persistent workids for %d pids", len(pids))
-    pw2p = {}
+    pw2p = defaultdict(list)
     for row in get_docs(
             "SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)",
             pids        
         ):
-        if row[1] in pw2p:
-            pw2p[row[1]].append(row[0])
-        else:
-            pw2p[row[1]] = [row[0]]
+        pw2p[row[1]].append(row[0])
     return pw2p
 
 def pid2corepo_work(pids) -> dict:
