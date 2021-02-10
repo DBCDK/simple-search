@@ -172,7 +172,7 @@ def pwork2pids(pids) -> dict:
             pw2p[row[1]].append(row[0])
         else:
             pw2p[row[1]] = [row[0]]
-    return pw2p
+    return dict(pw2p)
 
 def pid2corepo_work(pids) -> dict:
     logger.info("fetching corepo-workids for %d pids", len(pids))
