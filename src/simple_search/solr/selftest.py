@@ -12,18 +12,19 @@ import dbc_pyutils.cursor
 
 logger = logging.getLogger(__name__)
 
-def get_docs(stmt, pids_fp, args=None):
+def get_docs(stmt, pids_fn, args=None):
     args = args if args else {}
     with dbc_pyutils.cursor.PostgresCursor(os.environ['WORK_PRESENTATION_URL']) as cur:
         # pid_fp = io.StringIO()
         # for _id in pids:
         #    pid_fp.write(f"{_id}\n")
-        pids_fp.seek(0)
-        cur.execute("CREATE TEMP TABLE pids_tmp(pid TEXT)")
-        cur.copy_from(pids_fp, "pids_tmp", columns=["pid"])
-        cur.execute(stmt, args)
-        for row in cur:
-            yield row
+        with open(pids_fn) as pids_fp:
+            pids_fp.seek(0)
+            cur.execute("CREATE TEMP TABLE pids_tmp(pid TEXT)")
+            cur.copy_from(pids_fp, "pids_tmp", columns=["pid"])
+            cur.execute(stmt, args)
+            for row in cur:
+                yield row
 
 def pwork2pids(pids_fp) -> dict:
     """ Creates work -> (pids list) dict by fetching all relevant works from relations table in work-presentation-db """
