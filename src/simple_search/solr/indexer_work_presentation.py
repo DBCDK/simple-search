@@ -164,6 +164,12 @@ def pwork2pids(pids) -> dict:
     """ Creates work -> (pids list) dict by fetching all relevant works from relations table in work-presentation-db """
     logger.info("fetching persistent workids for %d pids", len(pids))
     pw2p = {}
+    ## debug
+    counter = 0
+    for r in get_docs("SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobjectv3 wo, workcontainsv3 wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)", pids):
+        counter = counter + 1
+    logger.info("counter is %d", counter)
+    ## end debug
     for row in get_docs("SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobjectv3 wo, workcontainsv3 wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)", pids):
         if row[1] in pw2p:
             pw2p[row[1]].append(row[0])
