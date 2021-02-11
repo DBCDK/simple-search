@@ -172,7 +172,7 @@ def pwork2pids(pids) -> dict:
     #     counter = counter + 1
     # logger.info("counter is %d", counter)
     pid_counter = 0
-    for p in get_docs("SELECT pid from pids_tmp pt where pt.pid not in (select manifestationid from workcontains)", pids):
+    for p in get_docs("SELECT pid from pids_tmp pt where pt.pid not in (select manifestationid from workcontains) limit 100", pids):
         pid_counter = pid_counter + 1
         logger.info("temp pid %s not found", p[0])
     logger.info("pid_counter is %d", pid_counter)
