@@ -23,13 +23,12 @@ import os
 import joblib
 import logging
 from tqdm import tqdm
-import numpy as np
-import pandas as pd
 import io
 import dbc_pyutils.solr
 import dbc_pyutils.cursor
 from dbc_pyutils import Time
-
+import random
+import string
 
 class ThreadedSolrIndexer():
     """
@@ -172,6 +171,10 @@ def pwork2pids(pids) -> dict:
     for r in get_docs("SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)", pids):
         counter = counter + 1
     logger.info("counter is %d", counter)
+    pid_counter = 0
+    for p in get_docs("SELECT pid from pids_tmp", pids):
+        pid_counter = pid_counter + 1
+    logger.info("pid_counter is %d", pid_counter)
     #end debug
     for row in get_docs("SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)", pids):
         if row[1] in pw2p:
@@ -261,10 +264,6 @@ def make_solr_documents(pid_list, work_to_holdings_map: dict, pop_map: dict, lim
                 "creator", "creator_sort", "contributor", "work_type",
                 "language", "subject_dbc", "series"]))
             yield document
-
-def chunks(l, n):
-    for i in range(0, len(l), n):
-        yield l[i: i+n]
 
 def add_keys(metadata, keys, is_list=True):
     """ adds key to document"""
