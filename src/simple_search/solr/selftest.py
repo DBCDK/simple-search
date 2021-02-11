@@ -27,7 +27,6 @@ def get_docs(stmt, pids_fp, args=None):
 
 def pwork2pids(pids_fp) -> dict:
     """ Creates work -> (pids list) dict by fetching all relevant works from relations table in work-presentation-db """
-    logger.info("fetching persistent workids for %d pids", len(pids))
     pw2p = {}
     ## debug
     counter = 0
