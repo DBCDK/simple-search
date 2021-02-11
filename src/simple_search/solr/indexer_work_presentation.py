@@ -167,13 +167,14 @@ def pwork2pids(pids) -> dict:
     logger.info("fetching persistent workids for %d pids", len(pids))
     pw2p = {}
     #debug block:
-    counter = 0
-    for r in get_docs("SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)", pids):
-        counter = counter + 1
-    logger.info("counter is %d", counter)
+    # counter = 0
+    # for r in get_docs("SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)", pids):
+    #     counter = counter + 1
+    # logger.info("counter is %d", counter)
     pid_counter = 0
-    for p in get_docs("SELECT wc.manifestationid pid from workcontains wc where wc.manifestationid = ANY(SELECT pid FROM pids_tmp)", pids):
+    for p in get_docs("SELECT pid from pids_tmp pt where pt.pid not in (select manifestationid from workcontains)", pids):
         pid_counter = pid_counter + 1
+        logger.info("temp pid %s not found", p[0])
     logger.info("pid_counter is %d", pid_counter)
     #end debug
     for row in get_docs("SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)", pids):
