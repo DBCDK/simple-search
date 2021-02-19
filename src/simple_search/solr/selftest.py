@@ -25,7 +25,7 @@ def get_docs(stmt, pids_fn, args=None):
 def create_collection(pids_fn):
     logger.info("Retrieving data from db")
     counter = 0
-    for r in get_docs("SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobjectv3 wo, workcontainsv3 wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)", pids_fn):
+    for r in get_docs("SELECT wc.manifestationid pid, wo.persistentworkid persistentworkid FROM workobject wo, workcontains wc WHERE wo.corepoworkid = wc.corepoworkid AND wc.manifestationid = ANY(SELECT pid FROM pids_tmp)", pids_fn):
         counter = counter + 1
     logger.info("counter is %d", counter)
     return
