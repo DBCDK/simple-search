@@ -154,6 +154,7 @@ def get_docs(stmt, pids, args=None):
         for _id in pids:
             pid_fp.write(f"{_id}\n")
         pid_fp.seek(0)
+        cur.execute("DROP TABLE IF EXISTS pids_tmp")
         cur.execute("CREATE TEMP TABLE pids_tmp(pid TEXT)")
         cur.copy_from(pid_fp, "pids_tmp", columns=["pid"])
         cur.execute(stmt, args)
