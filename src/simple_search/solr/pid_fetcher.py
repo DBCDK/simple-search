@@ -74,7 +74,7 @@ def main():
         pid_list = get_randers_pids(args.holdingsfilename)
     elif args.source == "corepo-workids":
         pid2work, _ = bibdk_pid2work_map()
-        work_list_duplicates = {p for p in pid2work.values}
+        work_list_duplicates = {p for p in pid2work.values()}
         work_set = set(work_list_duplicates)
         pid_list = list(work_set)
     else:
