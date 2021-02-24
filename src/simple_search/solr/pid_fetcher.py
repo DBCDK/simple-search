@@ -59,7 +59,6 @@ def cli():
     args = parser.parse_args()
     return args
 
-
 def main():
     args = cli()
     pid_list = []
