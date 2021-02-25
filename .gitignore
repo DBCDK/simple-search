@@ -9,3 +9,5 @@ work_to_holdings.joblib
 popularity-2018-2020.count.gz
 bibdk-pids/bibdk.pids
 pids-773000/*
+corepo-workids/*
+temp/*
