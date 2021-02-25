@@ -48,7 +48,7 @@ def get_randers_pids(holdingsfilename):
 def cli():
     parser = argparse.ArgumentParser('')
     parser.add_argument("source", help="The source for which to get pids",
-        choices=["bibdk", "randers", "corepo-workids"])
+        choices=["bibdk", "randers"])
     parser.add_argument('-f', '--holdings-filename',
                         dest='holdingsfilename',
                         help='filename for the holdingsdata. May both be a json or a json-gzipped file.')
@@ -71,11 +71,6 @@ def main():
                 file=sys.stderr)
             sys.exit(1)
         pid_list = get_randers_pids(args.holdingsfilename)
-    elif args.source == "corepo-workids":
-        pid2work, _ = bibdk_pid2work_map()
-        work_list_duplicates = {p for p in pid2work.values()}
-        work_set = set(work_list_duplicates)
-        pid_list = list(work_set)
     else:
         print(f"Unknown source {args.source}", file=sys.stderr)
         sys.exit(1)
